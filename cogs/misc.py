@@ -1,0 +1,1 @@
+#Glossary of music concepts in embeds, practice quizzes and dailies that will allow ppl to rank up via time practiced, practice streak. Also listening to music.

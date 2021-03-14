@@ -162,7 +162,14 @@ class BubbleTea(commands.Cog):
       except asyncio.TimeoutError:
         await ctx.send("You lose lah! Too slow!")
         break
-
+  @commands.command()
+  async def bal(self, ctx):
+    user = getUserData(ctx.author.id)
+    bal = user["bubbleTea"]
+    em = discord.Embed(title = f"{ctx.author.display_name}'s Balance")
+    em.set_thumbnail(url=ctx.author.avatar_url)
+    em.add_field(name = "Bubble tea", value = bal)
+    await ctx.send(embed = em)
 def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")

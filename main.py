@@ -5,9 +5,12 @@ from os import listdir
 from os.path import isfile, join
 import os
 import datetime
+#from cogs import bubbletea -- Not needed but just in case I forget how later
+from discord.utils import get
+
 #For color conversions to decimal: https://convertingcolors.com/
 
-intents = discord.Intents.none()
+intents = discord.Intents.default()
 intents.members = True
 intents.guilds = True
 intents.messages = True
@@ -18,6 +21,7 @@ bot = commands.Bot(command_prefix="p.",
 case_insensitive=True, 
 intents=intents, 
 description = "Keep practicing lah!")
+bot.remove_command('help')
 
 @bot.event
 async def on_ready():

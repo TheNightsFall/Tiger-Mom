@@ -92,7 +92,12 @@ class Teams(commands.Cog):
       if team != "None":
         await ctx.send("You can't create a team when you're already part of one!")
       else:
-        pass
+        teamNameTaken = userData.find_one({"team": teamJoin})
+        if teamNameTaken is None:
+          userData.update_one({"id":ctx.author.id}, {"$set":{"team":teamJoin}})
+          await ctx.send(f"Successfully created team {teamJoin}.")
+        else:
+          await ctx.send("That team name is already taken, please try again.")
 
       
 #Helper function uwu
@@ -100,7 +105,7 @@ def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "streak": 0, "to-do": [], "practiceLog": [],"sprintRemaining": -10, "dailyLastCollected": d,}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "streak": 0, "to-do": [], "practiceLog": [],"sprintRemaining": -10, "dailyLastCollected": d,"practiceGoal": 0}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam 

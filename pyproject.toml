@@ -11,6 +11,9 @@ pymongo = "^3.11.3"
 dnspython = "^2.1.0"
 discord-pretty-help = "^1.2.2"
 praw = "^7.2.0"
+tenorpy = "^1.0.4"
+TenGiphPy = "^2.5.0"
+pytz = "^2021.1"
 
 [tool.poetry.dev-dependencies]
 

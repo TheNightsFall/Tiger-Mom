@@ -1,5 +1,5 @@
 # Tiger-Mom
-A TwoSet/music themed discord bot started in honor of Brett's birthday, and hopefully somewhat cohesive by Eddy's. It's got some features but I'm terrible at coding.
+A TwoSet/music themed discord bot started in honor of Brett's birthday, and hopefully somewhat cohesive by Eddy's. Everything runs on UTC timezone.
 
 ### Bubble Tea
 
@@ -15,10 +15,11 @@ A TwoSet/music themed discord bot started in honor of Brett's birthday, and hope
 
 - Log: log some practice minutes, can also add what you've practiced
 - Setgoal: Sets a goal for practice
-- **[NOT ADDED]** Goals: View your current goals
-- **[NOT ADDED]** MeetGoal: Indicate you've accomplished a goal
-- **[NOT ADDED]** FinishedGoals: View your finished goals
-- **[NOTE ADDED]** Sprint: Start a practice sprint
+- Goals: View your current goals
+- **[NOT ADDED]** MeetGoal: Indicate you've accomplished a goal.
+- **[NOT ADDED]** FinishedGoals: View your finished goals.
+- **[NOT ADDED]** DeleteGoal: Delete a goal.
+- **[NOT ADDED]** Sprint: Start a practice sprint.
 
 ### Teams
 

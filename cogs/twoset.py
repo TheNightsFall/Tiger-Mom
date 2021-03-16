@@ -50,7 +50,7 @@ class Twoset(commands.Cog):
   
   @commands.command(aliases = ["socials"], brief="Gets a list of TwoSet's social media accounts.", description = "Gets a list of TwoSet's social media accounts")
   async def tssocials(self, ctx):
-    em = discord.Embed(title="TwoSet social links")
+    em = discord.Embed(title="TwoSet social links", color = 0)
     em.set_thumbnail(url="https://i.pinimg.com/originals/95/7c/27/957c2719b2863d68ae147164d0f4b19a.jpg")
     em.add_field(name="YT", value="[Link](https://youtube.com/c/twosetviolin/videos)")
     em.add_field(name="TikTok", value="[Link](https://www.tiktok.com/@twosetviolin?lang=en)", inline=False)

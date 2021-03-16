@@ -106,14 +106,14 @@ class BubbleTea(commands.Cog):
     prevGuesses = ''
     wordLength = ""
     lettersGuessedWrong = ''
-    composers = ["Bach", "Beethoven", "Mendelssohn", "Sibelius", "Tchaikovsky", "Prokofiev", "Chopin", "Liszt", "Rachmaninoff", "Paganini"]
+    composers = ["Bach", "Beethoven", "Mendelssohn","Mozart", "Sibelius", "Tchaikovsky", "Prokofiev", "Chopin", "Liszt", "Rachmaninoff", "Paganini", "Bingen", "Monteverdi", "Handel","Vivaldi", "Debussy", "Haydn", "Schumann", "Elgar", "Verdi","Wagner", "Strauss", "Mahler", "Schubert", "Stravinsky","Shostakovich","Brahms", "Holst", "Smetana", "Dvorak","Glass", "Bernstein", "Cage", "Boulez", "Satie", "Berg", "Gershwin", "Copland", "Schoenberg", "Bartok","Britten","Ravel"]
     stages = ["https://i.imgur.com/9rhapPT.png","https://imgur.com/ajwscmm.png","https://imgur.com/3oPGVWp.png","https://imgur.com/2T6dHKo.png","https://imgur.com/k6Gipci.png","https://imgur.com/EJJXQz6.png","https://imgur.com/vPsUnvM.png","https://imgur.com/ZiepSCT.png","https://imgur.com/Z7pMgbS.png","https://imgur.com/awakV05.png"]
     word = random.choice(composers).lower()
     #Sets up the initial _ _ _ _ _ to send. EXCEPT DISCORD MARKDOWN HUNNNNNNNNGH
     temp = len(word)
     for i in range(0, temp):
       wordLength += "- "
-    em = discord.Embed(title = wordLength, description = lettersGuessedWrong)
+    em = discord.Embed(title = wordLength, description = "Wrong letters: "+lettersGuessedWrong, color = 16092072)
     em.set_image(url=stages[tries])
     await ctx.send(embed = em)
     while tries < 9 and prevGuesses != "WE WIN THESE":
@@ -139,7 +139,7 @@ class BubbleTea(commands.Cog):
               wordLengthTemp[i] = letter.content+ " "
               wordLength = ''.join(map(str,wordLengthTemp))
           if tries == 9:
-            em = discord.Embed(title=f"You lose lah! Word was {word}", description = lettersGuessedWrong)
+            em = discord.Embed(title=f"You lose lah! Word was {word}", description = "Wrong letters: "+lettersGuessedWrong, color = 16092072)
             em.set_footer(text="You lose 10 bubble tea")
             em.set_image(url=stages[tries])
             await ctx.send(embed = em)
@@ -147,12 +147,12 @@ class BubbleTea(commands.Cog):
             userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
             break
           elif "-" in wordLength:
-            em = discord.Embed(title = wordLength, description = lettersGuessedWrong)
+            em = discord.Embed(title = wordLength, description = "Wrong letters: "+lettersGuessedWrong, color = 16092072)
             em.set_image(url=stages[tries])
             await ctx.send(embed = em)
           else:
             gain = 10-tries
-            em = discord.Embed(title = f"Correct! Word was {word}!", description = lettersGuessedWrong)
+            em = discord.Embed(title = f"Correct! Word was {word}!", description = "Wrong letters: "+lettersGuessedWrong, color = 16092072)
             em.set_image(url=stages[tries])
             em.set_footer(text=f"You gain {gain} bubble tea")
             bal += gain if bal != 0 else gain
@@ -174,7 +174,7 @@ def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "streak": 0, "to-do": [], "practiceLog": [],"sprintRemaining": -10, "dailyLastCollected": d, "practiceGoal": 0}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "streak": 0, "to-do": [], "practiceLog": [],"sprintRemaining": -10, "dailyLastCollected": d, "practiceGoal": 0, "to-done": []}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam 

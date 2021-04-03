@@ -22,10 +22,21 @@ A TwoSet/music themed discord bot started in honor of Brett's birthday, and hope
 - FinishedGoals: View your finished goals.
 - DeleteGoal: Delete a goal.
 - **[NOT ADDED]** Sprint: Start a practice sprint.
+- **[NOT ADDED]** Stats: View all your stats.
 
 ### Teams
 
-Very much incomplete commands
+- Ban: Put in a ban appeal (can lead to a perma-ban)
+- Create: Create a team, the name can be anything as long as it's untaken (and appropriate)
+- Join: join an existing team
+- Leave: leave your team
+- **[WIP]** Teamhelp: An explanation of how teams work.
+- **[NOT ADDED]** Game: Play a team game, probably going to be identifying the piece
+- **[NOT ADDED]** Mailbox: See challenges, both outgoing and ingoing
+- **[NOT ADDED]** Challenge: A team game, but you challenge another team to finish with more points.
+- **[NOT ADDED]** Accept: accept a challenge.
+- **[NOT ADDED]** Decline: decline a challenge. Can also just wait for it to time out.
+- **[NOT ADDED]** Quests: 
 
 ### TwoSet 🎻
 

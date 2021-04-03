@@ -7,22 +7,19 @@ import math
 import datetime
 cluster = pymongo.MongoClient(os.getenv('THING'))
 userData = cluster["tigermom"]["userstats"]
+teamData = cluster["tigermom"]["teams"]
 
 
 class Teams(commands.Cog):
   def __init__(self, bot):
     self.bot = bot
 
-  @commands.command(aliases = ["t"], brief = "Join or leave a team.", description = "Join or leave a team.")
+  @commands.command(aliases = ["j"], brief = "Join a team.", description = "Join a team.")
   @commands.cooldown(1, 172800, commands.BucketType.user)
-  async def team(self, ctx, joinLeave = None, *args):
-    if joinLeave == None:
-      #Don't delete (Python doesn't handle string operations with Nonetype)
-      await ctx.send("You need to specify whether you want to leave or join a team.")
-      reset = 1
-    elif joinLeave.lower() == "join":
-      #Checks that team exists and isn't full.
-      user = getUserData(ctx.author.id)
+  async def join(self, ctx, *args):
+    user = getUserData(ctx.author.id)
+    team = user["team"]
+    if team == "None":
       memberCount = 0
       teamJoin = ""
       for x in args:
@@ -38,31 +35,28 @@ class Teams(commands.Cog):
         await ctx.send("Team is full.")
         reset = 1
       else:
-        userData.update_one({"id": ctx.author.id}, {"$set":{"team": teamJoin}})
-        await ctx.send(f"Joined team {teamJoin} successfully.")
-        reset = 0
-    elif joinLeave.lower() == "leave":
-      #Checks user is part of a team.
-      user = getUserData(ctx.author.id)
-      team = user["team"]
-      if team == "None":
-        await ctx.send("You're not a part of a team")
-        reset = 1
-      else:
-        await ctx.send(f"Left {team} successfully.")
-        userData.update_one({"id":ctx.author.id}, {"$set":{"team":"None"}})
-        reset = 0
+        teamBan = teamData.find_one({"tn": teamJoin})
+        ban = teamBan["bans"]
+        boing = []
+        for x in ban:
+          if str(x) == str(ctx.author.id):
+            boing.append(x)
+        if boing == []:
+          getTeamData(teamJoin)
+          userData.update_one({"id": ctx.author.id}, {"$set":{"team": teamJoin}})
+          teamData.update_one({"tn": teamJoin}, {"$push" :{"members": ctx.author.id}})
+          await ctx.send(f"Joined team {teamJoin} successfully.")
+          reset = 0
+        else:
+          await ctx.send("You are banned from this team.")
+          reset = 1
     else:
-      await ctx.send("You need to specify whether you want to leave or join a team.")
       reset = 1
-    
-    #If the user makes a mistake in this command, cooldown resets.
+      await ctx.send("You're already part of a team lah!")
     if reset == 1:
       ctx.command.reset_cooldown(ctx)
-
-  @team.error
-  async def team_error(self, ctx, error):
-    #Ling ling already doctor lah!
+  @join.error
+  async def joinError(self, ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
       seconds = math.floor(error.retry_after)
       if seconds > 3600:
@@ -77,6 +71,47 @@ class Teams(commands.Cog):
     else:
       raise error
 
+  @commands.command(brief = "Leave a team.", description = "Leave a team.")
+  async def leave(self, ctx):
+    #Checks user is part of a team.
+    user = getUserData(ctx.author.id)
+    team = user["team"]
+    if team == "None":
+      await ctx.send("You're not a part of a team")
+      reset = 1
+    else:
+      temp = getTeamData(team)
+      mem = temp["members"]
+      if len(mem) == 1:
+        teamData.delete_one({"members": mem})
+      else:
+        teamData.update({"tn": team}, {"$pull" :{"members": ctx.author.id}})
+        try:
+          teamData.update({"tn": team}, {"$pull" :{"captains": ctx.author.id}})
+        except:
+          pass
+      userData.update_one({"id":ctx.author.id}, {"$set":{"team":"None"}})
+      await ctx.send(f"Left {team} successfully.")
+      reset = 0
+    #If the user makes a mistake in this command, cooldown resets.
+    if reset == 1:
+      ctx.command.reset_cooldown(ctx)
+  @leave.error
+  async def leaveError(self, ctx, error):
+    #Ling ling already doctor lah!
+    if isinstance(error, commands.CommandOnCooldown):
+      seconds = math.floor(error.retry_after)
+      if seconds > 3600:
+        hours = str(math.floor(seconds/3600))
+        minutes = str(math.floor((int(seconds) - int(hours)*3600)/60))
+        await ctx.send("You count time as bad as you practice, no wonder you not doctor. Try again in "+hours+" hours and "+minutes+" minutes.")
+      elif seconds < 60:
+        await ctx.send("You count time as bad as you practice, no wonder you not doctor. Try again in "+seconds+" seconds.")
+      else:
+        minutes = str(math.floor(seconds/60))
+        await ctx.send("You count time as bad as you practice, no wonder you not doctor. Try again in " + minutes + " minutes.")
+    else:
+      raise error
   @commands.command(brief = "Create a team.", description = "Create a team.")
   async def create(self, ctx, *args):
     teamJoin = ""
@@ -84,6 +119,7 @@ class Teams(commands.Cog):
         teamJoin += x
         teamJoin += " "
     teamJoin = teamJoin[:-1]
+    
     if teamJoin is None:
       await ctx.send("You can't create a team without a name.")
     else:
@@ -94,23 +130,108 @@ class Teams(commands.Cog):
       else:
         teamNameTaken = userData.find_one({"team": teamJoin})
         if teamNameTaken is None:
+          user = getTeamData(teamJoin)
           userData.update_one({"id":ctx.author.id}, {"$set":{"team":teamJoin}})
+          teamData.update_one({"tn": teamJoin}, {"$push" :{"members": ctx.author.id}})
+          teamData.update_one({"tn": teamJoin}, {"$push" :{"captains": ctx.author.id}})
           await ctx.send(f"Successfully created team {teamJoin}.")
         else:
           await ctx.send("That team name is already taken, please try again.")
+  #Update this more later
+  @commands.command(aliases = ["th", "thelp", "teamh"], brief = "Overview of teams.", description = "An overview of teams.")
+  async def teamhelp(self, ctx):
+    hContent = '''
+    ===================================
+    **The Basics:**
+    ===================================
+    Each team can have up to 10 members, 
+    and technically up to 10 captains 
+    as well. All members can view the
+    team's inbox, put/vote in ban 
+    appeals, and accept challenges, but 
+    captains can change the team name,
+    icon, send challenges, and have more
+    weight in ban appeals.
 
+    '''
+    em = discord.Embed(title = "An overview of teams...", color = 15417396, description = hContent)
+    await ctx.send(embed = em)
+  
+  @commands.command(brief = "Put in a ban appeal.", description = "Put in a ban appeal.")
+  @commands.cooldown(1, 345600, commands.BucketType.user)
+  async def ban(self, ctx, user:discord.Member = None):
+      if user == None:
+        await ctx.send("You need to specify a member lah!")
+        ctx.command.reset_cooldown(ctx)
+        return
+      banApp = user.id
+      temp = getUserData(ctx.author.id)
+      team = temp["team"]
+      if team == "None":
+        await ctx.send("You're not part of a team lah!")
+        ctx.command.reset_cooldown(ctx)
+        return
+      banListTemp = getTeamData(team)
+      captains = banListTemp["captains"]
+      bannerIsCap = 0
+      banneeIsCap = 0
+      for captain in captains:
+        if str(captain) == str(ctx.author.id):
+          bannerIsCap = 1
+        if str(captain) == str(banApp):
+          banneeIsCap = 1
+      if bannerIsCap == 1 and banneeIsCap == 0:
+        banList = banListTemp["pending"]
+        for x in banList:
+          if str(user.id) in x:
+            teamData.update_one({"tn": team}, {"$pull" :{"pending": x}})
+        teamData.update_one({"tn": team}, {"$push" :{"bans": banApp}})
+        teamData.update_one({"tn": team}, {"$pull" :{"members": banApp}})
+        userData.update_one({"id": banApp}, {"$set":{"team": "None"}})
+        await ctx.send(f"{user.mention} was banned from team {team}.")
+        return
+      else:
+        banList = banListTemp["pending"]
+        for x in banList:
+          if str(user.id) in x:
+            print(x)
+            #Maybe give captains more weight, who knows.
+            currentNum = x[-1]+2 if bannerIsCap == 1 else x[-1]+1
+            y = str(user.id)+": "+str(currentNum)
+            threshold = 5 if banneeIsCap == 0 else 7
+            if y < threshold:
+              teamData.update_many({"pending": x}, {"$set": {"pending.$": y}})
+              await ctx.send("Your vote has been recorded.")
+              return
+            else:
+              teamData.update_one({"tn": team}, {"$pull" :{"pending": x}})
+              teamData.update_one({"tn": team}, {"$pull" :{"members": banApp}})
+              userData.update_one({"id": banApp}, {"$set":{"team": "None"}})
+              if banneeIsCap == 1:
+                teamData.update_one({"tn": team}, {"$pull" :{"captains": banApp}})
+              await ctx.send("Your vote has been recorded, this user has been banned.")
+              return
+        x = str(banApp)+": 2" if bannerIsCap == 1 else str(banApp)+": 1"
+        teamData.update_one({"tn": team}, {"$push": {"pending": x}})
+        await ctx.send("Your vote has been recorded.")
       
 #Helper function uwu
 def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "streak": 0, "to-do": [], "practiceLog": [],"sprintRemaining": -10, "dailyLastCollected": d,"practiceGoal": 0, "to-done": []}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "streak": 0, "to-do": [], "practiceLog": [],"sprintRemaining": -10, "dailyLastCollected": d,"practiceGoal": 0, "to-done": [], "awards": []}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam 
   
-
+def getTeamData(x):
+  userTeam = teamData.find_one({"tn": x})
+  if userTeam is None:
+    newTeam = {"tn": x, "xp": 0, "questday": 0, "gamenum": 0, "members": [], "captains": [], "bans": [], "pending": [], "challenges": []}
+    teamData.insert_one(newTeam)
+  userTeam = teamData.find_one({"tn": x})
+  return userTeam
 
 def setup(bot):
   bot.add_cog(Teams(bot))

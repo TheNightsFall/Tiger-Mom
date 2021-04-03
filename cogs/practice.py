@@ -8,8 +8,12 @@ import pytz
 
 cluster = pymongo.MongoClient(os.getenv('THING'))
 userData = cluster["tigermom"]["userstats"]
-channel = ""
-messageSend = ""
+
+#channel = ""
+#messageSend = ""
+#Stats, queue, skip, del, leaderboard?, sprint
+#colors: 16092072, 15417396
+
 class Practice(commands.Cog):
   def __init__(self, bot):
     self.bot = bot
@@ -47,7 +51,7 @@ class Practice(commands.Cog):
     if goal == "":
       await ctx.send("You need to specify a goal lah!")
     else:
-      user = getUserData(ctx.author.id) #Makes sure user in database
+      getUserData(ctx.author.id) #Makes sure user in database
       goalMatch = userData.find_one({"id": ctx.author.id, "to-do": goal})
       if goalMatch is None:
         userData.update_one({"id": ctx.author.id}, {"$push": {"to-do": goal}})
@@ -56,6 +60,7 @@ class Practice(commands.Cog):
         #userData.update_one({"id":ctx.author.id}, {"$push":{"practiceLog": {timeNow: goal}}})
       else:
         await ctx.send("Goal already exists lah!")
+
 
   @commands.command(brief = "Displays active goals.", description = "Displays active goals.")
   async def goals(self, ctx):
@@ -146,15 +151,21 @@ class Practice(commands.Cog):
         em.add_field(name = x[0], value = x[1])
     em.set_footer(text="Go practice lah!")
     await ctx.send(embed = em)
+  
+  
+  
 
 def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "streak": 0, "to-do": [], "practiceLog": [],"sprintRemaining": -10, "dailyLastCollected": d, "practiceGoal": 0, "to-done": []}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "streak": 0, "to-do": [], "practiceLog": [],"sprintRemaining": -10, "dailyLastCollected": d,"practiceGoal": 0, "to-done": [], "awards": []}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam 
+
+
+
 
 def setup(bot):
   bot.add_cog(Practice(bot))

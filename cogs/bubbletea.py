@@ -1,4 +1,4 @@
-#Glossary of music concepts in embeds, practice quizzes and dailies that will allow ppl to rank up via time practiced, practice streak. Also listening to music.
+#Glossary of music concepts in embeds, eh.
 
 #Hangman, unscramble the word
 import dns
@@ -21,7 +21,7 @@ class BubbleTea(commands.Cog):
   def __init__(self, bot):
     self.bot = bot
 
-  @commands.command()
+  @commands.command(brief = "Daily reward.", description = "Daily reward.")
   @commands.cooldown(1, 86400, commands.BucketType.user)
   async def daily(self, ctx):
     baseReward = 75
@@ -62,23 +62,23 @@ class BubbleTea(commands.Cog):
     noteList = {"C":260, "D":249, "E": 234, "F":217, "G":202,"A":184,"B":169,"c":151,"d":136,"e":119,"f":104,"g":87,}
     vals = list(noteList.values())
     keys = list(noteList.keys())
-    stave = Image.open("cogs/images/notes/trebleclef.jpg")
+    stave = Image.open("cogs/media/notes/trebleclef.jpg")
     picker = random.randint(1,3)
     if picker == 1:
-      note = Image.open("cogs/images/notes/wholenoteline.png")
+      note = Image.open("cogs/media/notes/wholenoteline.png")
       note = note.resize((68,30))
       yValueChoice = [260, 234, 202, 169, 136, 104]
     else:
-      note = Image.open("cogs/images/notes/wholenote.png")
+      note = Image.open("cogs/media/notes/wholenote.png")
       note = note.resize((47,29))
       yValueChoice = [249, 217, 184, 151, 119, 87]
     yValue=random.choice(yValueChoice)
     pos = vals.index(yValue)
     correctNote = keys[pos].upper()
     stave.paste(note, (330,yValue))
-    stave.save("cogs/images/notes/notereading.jpg")
+    stave.save("cogs/media/notes/notereading.jpg")
     em = discord.Embed(title="Identify the note!", color = 15417396)
-    file = discord.File("cogs/images/notes/notereading.jpg", filename = "image.jpg")
+    file = discord.File("cogs/media/notes/notereading.jpg", filename = "image.jpg")
     em.set_image(url="attachment://image.png")
     user = getUserData(ctx.author.id)
     bal = user["bubbleTea"]
@@ -86,6 +86,7 @@ class BubbleTea(commands.Cog):
       await ctx.send(file=file, embed=em)
       answer = await self.bot.wait_for('message', check= lambda message: message.author == ctx.author, timeout=10)
       if answer.content.upper() == correctNote:
+        await answer.add_reaction("🎯")
         await ctx.send("Correct, but Ling ling got it while doing brain surgery. +5 <:bubbletea:818865910034071572>")
         bal = bal + 5 if bal != 0 else 5 #Does this work if I do +=?
         userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
@@ -113,7 +114,7 @@ class BubbleTea(commands.Cog):
     temp = len(word)
     for i in range(0, temp):
       wordLength += "- "
-    em = discord.Embed(title = wordLength, description = "Wrong letters: "+lettersGuessedWrong, color = 16092072)
+    em = discord.Embed(title = wordLength, description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
     em.set_image(url=stages[tries])
     await ctx.send(embed = em)
     while tries < 9 and prevGuesses != "WE WIN THESE":
@@ -139,7 +140,7 @@ class BubbleTea(commands.Cog):
               wordLengthTemp[i] = letter.content+ " "
               wordLength = ''.join(map(str,wordLengthTemp))
           if tries == 9:
-            em = discord.Embed(title=f"You lose lah! Word was {word}", description = "Wrong letters: "+lettersGuessedWrong, color = 16092072)
+            em = discord.Embed(title=f"You lose lah! Word was {word}", description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
             em.set_footer(text="You lose 10 bubble tea")
             em.set_image(url=stages[tries])
             await ctx.send(embed = em)
@@ -147,12 +148,12 @@ class BubbleTea(commands.Cog):
             userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
             break
           elif "-" in wordLength:
-            em = discord.Embed(title = wordLength, description = "Wrong letters: "+lettersGuessedWrong, color = 16092072)
+            em = discord.Embed(title = wordLength, description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
             em.set_image(url=stages[tries])
             await ctx.send(embed = em)
           else:
             gain = 10-tries
-            em = discord.Embed(title = f"Correct! Word was {word}!", description = "Wrong letters: "+lettersGuessedWrong, color = 16092072)
+            em = discord.Embed(title = f"Correct! Word was {word}!", description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
             em.set_image(url=stages[tries])
             em.set_footer(text=f"You gain {gain} bubble tea")
             bal += gain if bal != 0 else gain
@@ -162,19 +163,26 @@ class BubbleTea(commands.Cog):
       except asyncio.TimeoutError:
         await ctx.send("You lose lah! Too slow!")
         break
-  @commands.command()
-  async def bal(self, ctx):
+  @commands.command(aliases = ["balance", "bal", "stat"], brief = "Shows balance.", description = "Shows balance.")
+  async def stats(self, ctx):
     user = getUserData(ctx.author.id)
     bal = user["bubbleTea"]
-    em = discord.Embed(title = f"{ctx.author.display_name}'s Balance")
+    practice = str(user["practiceTime"])
+    teams = user["team"]
+    em = discord.Embed(title = f"{ctx.author.display_name}'s stats", color = 	13582400, description = f'''
+    ===================================
+    Bubble tea: {bal}
+    Practice Time: {practice} minutes
+    ===================================
+    Team: {teams}''')
     em.set_thumbnail(url=ctx.author.avatar_url)
-    em.add_field(name = "Bubble tea", value = bal)
+    em.set_footer(text="⏰ Go practice lah!")
     await ctx.send(embed = em)
 def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "streak": 0, "to-do": [], "practiceLog": [],"sprintRemaining": -10, "dailyLastCollected": d, "practiceGoal": 0, "to-done": []}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "streak": 0, "to-do": [], "practiceLog": [],"sprintRemaining": -10, "dailyLastCollected": d,"practiceGoal": 0, "to-done": [], "awards": []}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam 

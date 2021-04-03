@@ -5,6 +5,7 @@ from discord.ext import commands
 import os
 import random
 import dns
+from PIL import Image, ImageFont, ImageDraw
 import TenGiphPy
 
 #Sets up API, https://www.reddit.com/prefs/apps.
@@ -59,6 +60,17 @@ class Twoset(commands.Cog):
     em.add_field(name="Facebook", value="[Link](https://www.facebook.com/TwoSetViolin)", inline=False)
     em.set_footer(text="Missed anything? DM Nights!")
     await ctx.send(embed =em)
+  
+  @commands.command(brief = "iNtErEstInG.", description = "iNtErEstInG.")
+  async def interesting(self, ctx, user:discord.Member = None):
+    if user == None:
+      user = ctx.author
+    interest = Image.open("cogs/media/0.jpg")
+    font = ImageFont.truetype("media/Monaco.ttf", 80)
+    draw = ImageDraw.Draw(interest)
+    draw.text((101,510),f"{user.display_name} is",(255,255,255), font=font)
+    interest.save("cogs/media/01.jpg")
+    await ctx.send(content = f"{user.display_name} is iNteReSTiNG", file=discord.File("cogs/media/01.jpg"))
 #Probably have interesting and AMAZING here. As well as some other sacreligious memes.
 def setup(bot):
   bot.add_cog(Twoset(bot))

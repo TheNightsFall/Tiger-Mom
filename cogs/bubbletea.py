@@ -126,58 +126,58 @@ class BubbleTea(commands.Cog):
           except asyncio.TimeoutError:
             await ctx.send("You lose lah! Too slow!")
             break
-        if letter.content.lower() in prevGuesses:
-          await ctx.send("You already guessed that letter lah!")
+        if len(letter.content) == 1:
+          if letter.content.lower() in prevGuesses:
+            await ctx.send("You already guessed that letter lah!")
+          else:
+            prevGuesses += letter.content+", "
+            letterPresent = [pos for pos, char in enumerate(word) if char == letter.content]
+            if not letterPresent:
+              tries += 1
+              lettersGuessedWrong += letter.content
+            else:
+              wordLengthTemp = [wordLength[i:i+2] for i in range(0,len(wordLength), 2)]
+              for i in letterPresent:
+                wordLengthTemp[i] = letter.content+ " "
+                wordLength = ''.join(map(str,wordLengthTemp))
+            if tries == 9:
+              em = discord.Embed(title=f"You lose lah! Word was {word}", description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
+              em.set_footer(text="You lose 10 bubble tea.")
+              em.set_image(url=stages[tries])
+              await ctx.send(embed = em)
+              bal = bal-10 if bal >= 10 else 0
+              userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
+              break
+            elif "-" in wordLength:
+              em = discord.Embed(title = wordLength, description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
+              em.set_image(url=stages[tries])
+              await ctx.send(embed = em)
+            else:
+              gain = 10-tries
+              em = discord.Embed(title = f"Correct! Word was {word}!", description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
+              em.set_image(url=stages[tries])
+              em.set_footer(text=f"You gain {gain} bubble tea")
+              bal += gain if bal != 0 else gain
+              userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
+              await ctx.send(embed = em)
+              break
         else:
-          prevGuesses += letter.content+", "
-          letterPresent = [pos for pos, char in enumerate(word) if char == letter.content]
-          if not letterPresent:
-            tries += 1
-            lettersGuessedWrong += letter.content
-          else:
-            wordLengthTemp = [wordLength[i:i+2] for i in range(0,len(wordLength), 2)]
-            for i in letterPresent:
-              wordLengthTemp[i] = letter.content+ " "
-              wordLength = ''.join(map(str,wordLengthTemp))
-          if tries == 9:
-            em = discord.Embed(title=f"You lose lah! Word was {word}", description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
-            em.set_footer(text="You lose 10 bubble tea")
-            em.set_image(url=stages[tries])
-            await ctx.send(embed = em)
-            bal = bal-10 if bal >= 10 else 0
-            userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
-            break
-          elif "-" in wordLength:
-            em = discord.Embed(title = wordLength, description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
-            em.set_image(url=stages[tries])
-            await ctx.send(embed = em)
-          else:
-            gain = 10-tries
-            em = discord.Embed(title = f"Correct! Word was {word}!", description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
-            em.set_image(url=stages[tries])
-            em.set_footer(text=f"You gain {gain} bubble tea")
-            bal += gain if bal != 0 else gain
-            userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
-            await ctx.send(embed = em)
-            break
+          pass
       except asyncio.TimeoutError:
-        await ctx.send("You lose lah! Too slow!")
+        await ctx.send(f"You lose lah! Too slow! Word was {word}.")
         break
-  @commands.command(aliases = ["balance", "bal", "stat"], brief = "Shows balance.", description = "Shows balance.")
-  async def stats(self, ctx):
-    user = getUserData(ctx.author.id)
-    bal = user["bubbleTea"]
-    practice = str(user["practiceTime"])
-    teams = user["team"]
-    em = discord.Embed(title = f"{ctx.author.display_name}'s stats", color = 	13582400, description = f'''
-    ===================================
-    Bubble tea: {bal}
-    Practice Time: {practice} minutes
-    ===================================
-    Team: {teams}''')
-    em.set_thumbnail(url=ctx.author.avatar_url)
-    em.set_footer(text="⏰ Go practice lah!")
-    await ctx.send(embed = em)
+  
+  @commands.command(brief = "Displays a user's bubble tea.", description = "Displays a user's bubble tea.")
+  async def bal(self, ctx, user:discord.Member = None):
+    if user is None:
+      user = ctx.author
+    elif user == self.bot.user:
+      bal = "infinite"
+    else:
+      users = getUserData(ctx.author.id)
+      bal = users["bubbleTea"]
+    await ctx.send(f"{user.mention} has {bal} bubble tea <:bubbletea:818865910034071572>")
+
 def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")

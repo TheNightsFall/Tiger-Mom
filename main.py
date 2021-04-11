@@ -42,7 +42,9 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-  if "interesting" in message.content.lower():
+  if message.author == bot.user:
+    pass
+  elif "interesting" in message.content.lower():
     await message.add_reaction(r'<:eddy_interesting:760913535013748746>')
   await bot.process_commands(message)
 

@@ -23,7 +23,7 @@ A TwoSet/music themed discord bot started in honor of Brett's birthday, and hope
 - DeleteGoal: Delete a goal.
 - **[NOT ADDED]** Sprint: Start a practice sprint.
 
-### Teams
+### Teams 🤝
 
 Very much incomplete commands
 

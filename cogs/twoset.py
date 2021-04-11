@@ -66,9 +66,9 @@ class Twoset(commands.Cog):
     if user == None:
       user = ctx.author
     interest = Image.open("cogs/media/0.jpg")
-    font = ImageFont.truetype("media/Monaco.ttf", 80)
+    font = ImageFont.truetype("cogs/media/Monaco.ttf", 80)
     draw = ImageDraw.Draw(interest)
-    draw.text((101,510),f"{user.display_name} is",(255,255,255), font=font)
+    draw.text((101,490),f"{user.display_name} is",(255,255,255), font=font)
     interest.save("cogs/media/01.jpg")
     await ctx.send(content = f"{user.display_name} is iNteReSTiNG", file=discord.File("cogs/media/01.jpg"))
 #Probably have interesting and AMAZING here. As well as some other sacreligious memes.

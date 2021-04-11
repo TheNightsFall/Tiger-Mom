@@ -24,7 +24,7 @@ A TwoSet/music themed discord bot started in honor of Brett's birthday, and hope
 - **[NOT ADDED]** Sprint: Start a practice sprint.
 - **[NOT ADDED]** Stats: View all your stats.
 
-### Teams
+### Teams 🤝
 
 - Ban: Put in a ban appeal (can lead to a perma-ban)
 - Create: Create a team, the name can be anything as long as it's untaken (and appropriate)

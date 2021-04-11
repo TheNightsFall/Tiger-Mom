@@ -11,7 +11,7 @@ userData = cluster["tigermom"]["userstats"]
 
 #channel = ""
 #messageSend = ""
-#Stats, queue, skip, del, leaderboard?, sprint
+#Stats leaderboard?, sprint
 #colors: 16092072, 15417396
 
 class Practice(commands.Cog):
@@ -152,7 +152,21 @@ class Practice(commands.Cog):
     em.set_footer(text="Go practice lah!")
     await ctx.send(embed = em)
   
-  
+  @commands.command(aliases = ["statistics", "stat"], brief = "Shows balance.", description = "Shows balance.")
+  async def stats(self, ctx):
+    user = getUserData(ctx.author.id)
+    bal = user["bubbleTea"]
+    practice = str(user["practiceTime"])
+    teams = user["team"]
+    em = discord.Embed(title = f"{ctx.author.display_name}'s stats", color = 13582400, description = f'''
+    =========================
+    Bubble tea: {bal}
+    Practice Time: {practice} minutes
+    =========================
+    Team: {teams}''')
+    em.set_thumbnail(url=ctx.author.avatar_url)
+    em.set_footer(text="⏰ Go practice lah!")
+    await ctx.send(embed = em)
   
 
 def getUserData(x):
@@ -163,9 +177,6 @@ def getUserData(x):
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam 
-
-
-
 
 def setup(bot):
   bot.add_cog(Practice(bot))

@@ -3,7 +3,9 @@ import dns
 import os
 import pymongo
 from discord.ext import commands
+import asyncio
 import math
+import random
 import datetime
 cluster = pymongo.MongoClient(os.getenv('THING'))
 userData = cluster["tigermom"]["userstats"]
@@ -70,7 +72,7 @@ class Teams(commands.Cog):
         await ctx.send("You count time as bad as you practice, no wonder you not doctor. Try again in " + minutes + " minutes.")
     else:
       raise error
-
+  #Still need to check if user is the last captain
   @commands.command(brief = "Leave a team.", description = "Leave a team.")
   async def leave(self, ctx):
     #Checks user is part of a team.
@@ -215,6 +217,47 @@ class Teams(commands.Cog):
         teamData.update_one({"tn": team}, {"$push": {"pending": x}})
         await ctx.send("Your vote has been recorded.")
       
+  @commands.command(brief = "Play a team game.", description = "Play a team game.")
+  async def game(self, ctx):
+    pieces = ["https://imgur.com/ap3xhAx.png","https://imgur.com/YlXwca6.png","https://imgur.com/bAzulbm.png","https://imgur.com/rTy01R7.png","https://imgur.com/XK1N3v6.png","https://imgur.com/Uq77WqN.png","https://imgur.com/QlRRgZa.png","https://imgur.com/kEw5Xy5.png"]
+    all = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣']
+    era = ['5️⃣', '4️⃣', '3️⃣', '4️⃣', '2️⃣', '5️⃣', '4️⃣', '4️⃣',]
+    composer = ["rachmaninoff", "schubert", "mozart", "bizet", "bach", "stravinsky", "smetana", "bazzini"]
+    piece = random.randint(0,7)
+    temp = getUserData(ctx.author.id)
+    tem = temp["team"]
+    temp = getTeamData(tem)
+    validMembers = temp["members"]
+    print(validMembers)
+    points = 0
+    em = discord.Embed(title = "Question 1 - Guess the era of the piece shown.", description = "Reactions from left to right, renaissance, baroque, classical, romantic, 20th century, contemporary.",color = 15417396)
+    em.set_image(url=pieces[piece])
+    em.set_footer(text=f"You have 6 minutes to finish the game as a team {tem}.")
+    msg = await ctx.send(embed=em)
+    for any in all:
+      await msg.add_reaction(any)
+    try:
+      answer = await self.bot.wait_for('reaction_add', check= lambda reaction, user: user.id in validMembers, timeout=600)
+      while str(answer[0]) not in str(all):
+        print("statement running.")
+        answer = await self.bot.wait_for('reaction_add', check= lambda reaction, user: user.id in validMembers)
+      if str(answer[0]) == str(era[piece]):
+        points += 1
+      em = discord.Embed(title = "Question 2 - Guess the composer of the piece, by last name.", description = "Send it in a message.", color = 15417396)
+      em.set_image(url=pieces[piece])
+      em.set_footer(text=f"You have 6 minutes to finish the game as a team {tem}.")
+      await ctx.send(embed=em)
+      Answer = await self.bot.wait_for('message', check = lambda message, user: user.id in validMembers)
+      print(Answer)
+      if str(Answer.lower()) == str(composer[piece]):
+        points += 3
+        print("corrrrrect")
+      em = discord.Embed(title = "Question 3 - What type of piece was it originally?", description = "Valid answers include solo, concerto, symphony, concert band, jazz band, string orchestra, duet, trio, quartet, quintet.")
+      em.set_image(url=pieces[piece])
+      em.set_footer(text=f"You have 6 minutes to finish the game as a team {tem}.")
+    except asyncio.TimeoutError:
+      await ctx.send(f"You too slow lah! Game over with {points} points.")
+
 #Helper function uwu
 def getUserData(x):
   userTeam = userData.find_one({"id": x})

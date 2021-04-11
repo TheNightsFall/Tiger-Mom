@@ -220,10 +220,10 @@ class Teams(commands.Cog):
   @commands.command(brief = "Play a team game.", description = "Play a team game.")
   async def game(self, ctx):
     pieces = ["https://imgur.com/ap3xhAx.png","https://imgur.com/YlXwca6.png","https://imgur.com/bAzulbm.png","https://imgur.com/rTy01R7.png","https://imgur.com/XK1N3v6.png","https://imgur.com/Uq77WqN.png","https://imgur.com/QlRRgZa.png","https://imgur.com/kEw5Xy5.png"]
-    era = ['5️⃣', '4️⃣', '3️⃣', '4️⃣', '2️⃣', '5️⃣', '4️⃣', '4️⃣']
+    all = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣']
+    era = ['5️⃣', '4️⃣', '3️⃣', '4️⃣', '2️⃣', '5️⃣', '4️⃣', '4️⃣',]
     composer = ["rachmaninoff", "schubert", "mozart", "bizet", "bach", "stravinsky", "smetana", "bazzini"]
     piece = random.randint(0,7)
-    print(piece)
     temp = getUserData(ctx.author.id)
     tem = temp["team"]
     temp = getTeamData(tem)
@@ -234,22 +234,20 @@ class Teams(commands.Cog):
     em.set_image(url=pieces[piece])
     em.set_footer(text=f"You have 6 minutes to finish the game as a team {tem}.")
     msg = await ctx.send(embed=em)
-    await msg.add_reaction('1️⃣')
-    await msg.add_reaction('2️⃣')
-    await msg.add_reaction('3️⃣')
-    await msg.add_reaction('4️⃣')
-    await msg.add_reaction('5️⃣')
-    await msg.add_reaction('6️⃣')
+    for any in all:
+      await msg.add_reaction(any)
     try:
       answer = await self.bot.wait_for('reaction_add', check= lambda reaction, user: user.id in validMembers, timeout=600)
-      print(answer[0], era[piece])
+      while str(answer[0]) not in str(all):
+        print("statement running.")
+        answer = await self.bot.wait_for('reaction_add', check= lambda reaction, user: user.id in validMembers)
       if str(answer[0]) == str(era[piece]):
         points += 1
       em = discord.Embed(title = "Question 2 - Guess the composer of the piece, by last name.", description = "Send it in a message.", color = 15417396)
       em.set_image(url=pieces[piece])
       em.set_footer(text=f"You have 6 minutes to finish the game as a team {tem}.")
       await ctx.send(embed=em)
-      Answer = str(await self.bot.wait_for('message', check = lambda message: message.id in validMembers))
+      Answer = await self.bot.wait_for('message', check = lambda message, user: user.id in validMembers)
       print(Answer)
       if str(Answer.lower()) == str(composer[piece]):
         points += 3

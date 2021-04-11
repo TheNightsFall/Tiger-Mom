@@ -13,6 +13,7 @@ from pretty_help import PrettyHelp, Navigation
 from keep_alive import keep_alive
 #from cogs import bubbletea
 #For color conversions to decimal: https://convertingcolors.com/
+#kill 1 in shell if rate limited
 
 intents = discord.Intents.default()
 intents.members = True

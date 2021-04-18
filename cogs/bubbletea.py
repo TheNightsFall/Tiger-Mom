@@ -16,7 +16,6 @@ import asyncio
 cluster = pymongo.MongoClient(os.getenv('THING'))
 userData = cluster["tigermom"]["userstats"]
 
-
 class BubbleTea(commands.Cog):
   def __init__(self, bot):
     self.bot = bot
@@ -171,10 +170,12 @@ class BubbleTea(commands.Cog):
   async def bal(self, ctx, user:discord.Member = None):
     if user is None:
       user = ctx.author
+      users = getUserData(user.id)
+      bal = users["bubbleTea"]
     elif user == self.bot.user:
       bal = "infinite"
     else:
-      users = getUserData(ctx.author.id)
+      users = getUserData(user.id)
       bal = users["bubbleTea"]
     await ctx.send(f"{user.mention} has {bal} bubble tea <:bubbletea:818865910034071572>")
 

@@ -9,6 +9,8 @@ A TwoSet/music themed discord bot started in honor of Brett's birthday, and hope
 - Bal: Check the amount of bubble tea you have.
 - Hangman: guess a composer from a list
 - Notereading: shows an image with questionable ledger lines and a note, you've got to identify it.
+- **[NOT ADDED]** Era: Guess the era of a composer
+- **[NOT ADDED]** Chord: Guess the chord name
 
 ### Practice 🎶
 
@@ -23,6 +25,7 @@ A TwoSet/music themed discord bot started in honor of Brett's birthday, and hope
 - DeleteGoal: Delete a goal.
 - **[NOT ADDED]** Sprint: Start a practice sprint.
 - **[NOT ADDED]** Stats: View all your stats.
+- **[NOT ADDED]** Scale: Gives a random scale to play
 
 ### Teams 🤝
 
@@ -31,7 +34,7 @@ A TwoSet/music themed discord bot started in honor of Brett's birthday, and hope
 - Join: join an existing team
 - Leave: leave your team
 - **[WIP]** Teamhelp: An explanation of how teams work.
-- **[NOT ADDED]** Game: Play a team game, probably going to be identifying the piece
+- Game: Play a team game in identifying the piece
 - **[NOT ADDED]** Mailbox: See challenges, both outgoing and ingoing
 - **[NOT ADDED]** Challenge: A team game, but you challenge another team to finish with more points.
 - **[NOT ADDED]** Accept: accept a challenge.

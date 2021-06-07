@@ -168,7 +168,9 @@ class Practice(commands.Cog):
     em.set_footer(text="⏰ Go practice lah!")
     await ctx.send(embed = em)
   
-
+  @commands.command(brief = "Gives a scale.", description = "Gives a scale to play.")
+  async def scale(self, ctx, *args): #Available choices: nat maj, nat sharp maj, nat flat maj, all maj
+    pass
 def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")

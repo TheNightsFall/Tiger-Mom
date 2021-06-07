@@ -217,7 +217,9 @@ class Teams(commands.Cog):
         teamData.update_one({"tn": team}, {"$push": {"pending": x}})
         await ctx.send(":ballot_box_with_checkmark: Your vote has been recorded.")
   
+
   @commands.command(aliases = ["chal"], brief = "Challenge a team.", description = "Challenge a team.")
+  @commands.cooldown(1, 3600, commands.BucketType.user)
   async def challenge(self, ctx, *args):
     temp = getUserData(ctx.author.id)
     team1 = temp["team"]
@@ -247,8 +249,9 @@ class Teams(commands.Cog):
       return
     await ctx.send(f"Team {teamChal} does not exist.")
     #outgoing challenges will be formatted in mongo as oteamname timeexpires
-
-  @commands.command(aliases=["mail","messages"], brief = "View your ingoing and outgoing challenges.", description = "View your ingoing and outgoing challenges.")  
+  '''
+  @commands.command(aliases=["mail","messages"], brief = "View your ingoing and outgoing challenges.", description = "View your ingoing and outgoing challenges.")
+  @commands.cooldown(1, 60, commands.BucketType.user)
   async def mailbox(self, ctx):
     temp = getUserData(ctx.author.id)
     team = temp["team"]
@@ -257,21 +260,43 @@ class Teams(commands.Cog):
       return
     team = getTeamData(team)
     inbox = team["challenges"]
-    ingoing = outgoing = []
+    ingoing = outgoing = {}
     if inbox == []:
       em = discord.Embed(title = "✉️ Inbox", description = "It's empty.", color =	4373885)
       await ctx.send(embed = em)
       return
     else:
       for mail in inbox:
-        if mail[0] == "o":
-          outgoing.append(mail)
+        if str(mail)[0] == "o":
+          outgoing.update(mail)
         else:
-          ingoing.append(mail)
-    emI = discord.Embed(title = "✉️ Mail Incoming")
+          ingoing.update(mail)
+      temp = list(outgoing.keys())
+      temp2 = list(outgoing.values())
+      current = datetime.datetime.now()
+      loop = -1
+      for x in temp:
+        loop += 1
+        timeChal = datetime.datetime.strptime(x, "%m/%d/%Y %H:%M:%S")
+        if current >= timeChal:
+          index = temp.index(x)
+          del temp[index]
+          del temp2[index]
+          teamData.update({"tn": team}, {"$pull": {"challenges": outgoing[loop]}})
+          print("ran.")
+      
+    emI = discord.Embed(title = "✉️ Mail Incoming", color = 15417396)
+    for x in temp2:
+      x = x[1:]
+      emI.add_field(name = x, value = "Expires: ", inline=False)
+    await ctx.send(embed = emI)
+
     #Check if the challenges are expired, then slice each item in list to make it look nice
 
+    #I have this hunch, that instead of all this looping I could just do teamData.update({"tn": team}, {"$pull": {"challenges": {$gte: current}}}) but change date to value and team to key.
+'''
   @commands.command(brief = "Play a team game.", description = "Play a team game.")
+  @commands.cooldown(1, 3600, commands.BucketType.user)
   async def game(self, ctx):
     pieces = ["https://imgur.com/ap3xhAx.png","https://imgur.com/YlXwca6.png","https://imgur.com/bAzulbm.png","https://imgur.com/rTy01R7.png","https://imgur.com/XK1N3v6.png","https://imgur.com/Uq77WqN.png","https://imgur.com/QlRRgZa.png","https://imgur.com/kEw5Xy5.png", "https://imgur.com/vHYfksw.png", "https://imgur.com/ATa2JNN.png", "https://imgur.com/oWVIRWT.png"]
     allEra = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣']
@@ -328,6 +353,7 @@ class Teams(commands.Cog):
       await ctx.send(f"Your team got {questionsRight} questions correct, gaining {points} xp.")
     except asyncio.TimeoutError:
       await ctx.send(f"You too slow lah! Game over with {points} points.")
+    
 
 #Helper function uwu
 def getUserData(x):
@@ -342,7 +368,7 @@ def getUserData(x):
 def getTeamData(x):
   userTeam = teamData.find_one({"tn": x})
   if userTeam is None:
-    newTeam = {"tn": x, "xp": 0, "questday": 0, "gamenum": 0, "members": [], "captains": [], "bans": [], "pending": [], "challenges": []}
+    newTeam = {"tn": x, "xp": 0, "questday": 0, "gamenum": 0, "members": [], "captains": [], "bans": [], "pending": [], "challenges": [], "accepted": []}
     teamData.insert_one(newTeam)
   userTeam = teamData.find_one({"tn": x})
   return userTeam

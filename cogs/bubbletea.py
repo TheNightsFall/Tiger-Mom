@@ -110,16 +110,15 @@ class BubbleTea(commands.Cog):
   @commands.command(aliases = ["composers"], brief = "Hangman...but with bubble tea.", description = "Hangman...but with bubble tea.")
   @commands.cooldown(1, 20, commands.BucketType.user)
   async def hangman(self, ctx):
+    global composers
     user = getUserData(ctx.author.id)
     bal = user["bubbleTea"]
     tries = 0
     prevGuesses = ''
     wordLength = ""
     lettersGuessedWrong = ''
-    global composers
     stages = ["https://i.imgur.com/9rhapPT.png","https://imgur.com/ajwscmm.png","https://imgur.com/3oPGVWp.png","https://imgur.com/2T6dHKo.png","https://imgur.com/k6Gipci.png","https://imgur.com/EJJXQz6.png","https://imgur.com/vPsUnvM.png","https://imgur.com/ZiepSCT.png","https://imgur.com/Z7pMgbS.png","https://imgur.com/awakV05.png"]
     word = random.choice(composers).lower()
-    #Sets up the initial _ _ _ _ _ to send. EXCEPT DISCORD MARKDOWN HUNNNNNNNNGH
     temp = len(word)
     for i in range(0, temp):
       wordLength += "- "
@@ -174,6 +173,7 @@ class BubbleTea(commands.Cog):
       except asyncio.TimeoutError:
         await ctx.send(f"You lose lah! Too slow! Word was {word.capitalize()}.")
         break
+  
   @hangman.error
   async def hangman(self, ctx, error):
     if isinstance(error, commands.CommandOnCooldown):

@@ -107,9 +107,9 @@ class BubbleTea(commands.Cog):
     else:
       raise error
 
-  @commands.command(aliases = ["composers"], brief = "Hangman...but with bubble tea.", description = "Hangman...but with bubble tea.")
+  @commands.command(aliases = ["composers","hangman","manhang"], brief = "Hangman...but with bubble tea.", description = "Hangman...but with bubble tea.")
   @commands.cooldown(1, 20, commands.BucketType.user)
-  async def hangman(self, ctx):
+  async def hm(self, ctx):
     global composers
     user = getUserData(ctx.author.id)
     bal = user["bubbleTea"]
@@ -128,7 +128,7 @@ class BubbleTea(commands.Cog):
     while tries < 9 and prevGuesses != "WE WIN THESE":
       try:
         letter = await self.bot.wait_for('message', check=lambda message: message.author == ctx.author, timeout = 20)
-        while letter.content.isalpha() == False or len(letter.content) != 1:
+        while letter.content.isalpha() == False:
           try:
             letter = await self.bot.wait_for('message', check= lambda message: message.author == ctx.author, timeout=20)
           except asyncio.TimeoutError:
@@ -168,13 +168,20 @@ class BubbleTea(commands.Cog):
               userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
               await ctx.send(embed = em)
               break
-        else:
-          pass
+        elif letter.content.lower() == word:
+          gain = 10-tries
+          em = discord.Embed(title = f"Correct! Word was {word.capitalize()}!", description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
+          em.set_image(url=stages[tries])
+          em.set_footer(text=f"You gain {gain} bubble tea")
+          bal += gain if bal != 0 else gain
+          userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
+          await ctx.send(embed = em)
+          break
       except asyncio.TimeoutError:
         await ctx.send(f"You lose lah! Too slow! Word was {word.capitalize()}.")
         break
   
-  @hangman.error
+  @hm.error
   async def hangman(self, ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
       await ctx.send(f"Wait {round(error.retry_after,3)} seconds. I sichuan your pepper!!")

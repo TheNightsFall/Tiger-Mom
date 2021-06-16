@@ -5,6 +5,7 @@ from discord.ext import commands
 import discord.utils
 import datetime
 import pytz
+import random
 
 cluster = pymongo.MongoClient(os.getenv('THING'))
 userData = cluster["tigermom"]["userstats"]
@@ -168,9 +169,29 @@ class Practice(commands.Cog):
     em.set_footer(text="⏰ Go practice lah!")
     await ctx.send(embed = em)
   
-  @commands.command(brief = "Gives a scale.", description = "Gives a scale to play.")
-  async def scale(self, ctx, *args): #Available choices: nat maj, nat sharp maj, nat flat maj, all maj
-    pass
+  @commands.command(aliases = ["scales"], brief = "Generates a random scale.", description = "Generates a random scale, with arguments either 'dia' (diatonic), 'all' and 'maj', 'min', 'hmin', and 'mmin' (not added).")
+  async def scale(self, ctx, *args):
+    diamaj = ["cmaj.PNG","dmaj.PNG","emaj.PNG","fmaj.PNG","gmaj.PNG","amaj.PNG","bmaj.PNG"]
+    diamin = ["cmin.PNG","dmin.PNG","emin.PNG","fmin.PNG","gmin.PNG","amin.PNG","bmin.PNG"]
+    req = ""
+    for x in args:
+        req += x
+        req += " "
+    req= req[:-1].lower()
+    if "diamaj" == req:
+      choice = random.choice(diamaj)
+      bud = choice[:-7].capitalize() + " Major"
+    elif "diamin" == req:
+      choice = random.choice(diamin)
+      bud = choice[:-7].capitalize() + " Minor"
+    else:
+      await ctx.send("Invalid request.")
+      return
+    file = discord.File(f"cogs/media/scales/{choice}")
+    em = discord.Embed(title=bud, color = 15417396)
+    em.set_image(url="attachment://image.png")
+    await ctx.send(file=file, embed=em)
+    
 def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")

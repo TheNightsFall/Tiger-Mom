@@ -143,7 +143,7 @@ class Teams(commands.Cog):
   #Update this more later
   @commands.command(aliases = ["th", "thelp", "teamh"], brief = "Overview of teams.", description = "An overview of teams.")
   async def teamhelp(self, ctx):
-    hContent = '''
+    hContent = ''' 
     ===================================
     **The Basics:**
     ===================================
@@ -156,11 +156,11 @@ class Teams(commands.Cog):
     icon, send challenges, and have more
     weight in ban appeals.
 
-    '''
+    ''' 
     em = discord.Embed(title = "An overview of teams...", color = 15417396, description = hContent)
     await ctx.send(embed = em)
   
-  @commands.command(brief = "Put in a ban appeal.", description = "Put in a ban appeal.")
+  @commands.command(aliases = ["kick"], brief = "Put in a ban appeal.", description = "Put in a ban appeal.")
   @commands.cooldown(1, 345600, commands.BucketType.user)
   async def ban(self, ctx, user:discord.Member = None):
       if user == None:
@@ -216,6 +216,7 @@ class Teams(commands.Cog):
         x = str(banApp)+": 2" if bannerIsCap == 1 else str(banApp)+": 1"
         teamData.update_one({"tn": team}, {"$push": {"pending": x}})
         await ctx.send(":ballot_box_with_checkmark: Your vote has been recorded.")
+    #self.bot.get_user(int(id))
   
 
   @commands.command(aliases = ["chal"], brief = "Challenge a team.", description = "Challenge a team.")
@@ -242,9 +243,8 @@ class Teams(commands.Cog):
       utcNow = pytz.utc.localize(datetime.datetime.utcnow())
       expiration = utcNow + timedelta(days=1)
       expiration = expiration.strftime("%m/%d/%Y %H:%M:%S")	
-      oteamChal, iteamChal = "o"+teamChal,"i"+team1
-      teamData.update_one({"tn": team1}, {"$push" :{"challenges": {expiration: oteamChal}}})
-      teamData.update_one({"tn": teamChal}, {"$push" :{"challenges": {expiration: iteamChal}}})
+      teamData.update_one({"tn": team1}, {"$push" :{"challenges": {"o": {"expiration": expiration, "challenged": teamChal}}}})
+      teamData.update_one({"tn": teamChal}, {"$push" :{"challenges": {"i": {"expiration": expiration, "challenged": team1}}}})
       await ctx.send(f"Challenge sent to {teamChal}.")
       return
     await ctx.send(f"Team {teamChal} does not exist.")
@@ -260,49 +260,46 @@ class Teams(commands.Cog):
       return
     team = getTeamData(team)
     inbox = team["challenges"]
-    ingoing = outgoing = {}
+    ingoing = []
+    outgoing = []
     if inbox == []:
       em = discord.Embed(title = "✉️ Inbox", description = "It's empty.", color =	4373885)
       await ctx.send(embed = em)
       return
     else:
       for mail in inbox:
-        if str(mail)[0] == "o":
-          outgoing.update(mail)
+        if str(mail)[2] == "o":
+          outgoing.append(mail)
         else:
-          ingoing.update(mail)
-      temp = list(outgoing.keys())
-      temp2 = list(outgoing.values())
+          ingoing.append(mail)
       current = datetime.datetime.now()
+      emO = discord.Embed(title = "✉️ Mail Outgoing", color = 15417396)
       loop = -1
-      for x in temp:
+      for x in range(1,len(outgoing)):
         loop += 1
-        timeChal = datetime.datetime.strptime(x, "%m/%d/%Y %H:%M:%S")
+        timeChal = datetime.datetime.strptime(outgoing[loop]["o"]["expiration"], "%m/%d/%Y %H:%M:%S")
         if current >= timeChal:
-          index = temp.index(x)
-          del temp[index]
-          del temp2[index]
-          teamData.update({"tn": team}, {"$pull": {"challenges": outgoing[loop]}})
+          del outgoing[loop]
+          #THESE DON'T WORK bc your "tn" isn't team, it should be team["name"] or wahtever i called it in Mongo
+          teamData.update({"tn": team["tn"]}, {"$pull": {"challenges": {"o": {"expiration": outgoing[loop]["o"]["expiration"], "challenged": outgoing[loop]["o"]["challenged"]}}}})
+          #Idk why this one doesn't work
+          teamData.update({"tn": outgoing[loop]["o"]["challenged"]}, {"$pull": {"challenges": {"i": {"expiration": outgoing[loop]["o"]["expiration"], "challenged": team}}}})
           print("ran.")
-      
-    emI = discord.Embed(title = "✉️ Mail Incoming", color = 15417396)
-    for x in temp2:
-      x = x[1:]
-      emI.add_field(name = x, value = "Expires: ", inline=False)
-    await ctx.send(embed = emI)
-
-    #Check if the challenges are expired, then slice each item in list to make it look nice
-
-    #I have this hunch, that instead of all this looping I could just do teamData.update({"tn": team}, {"$pull": {"challenges": {$gte: current}}}) but change date to value and team to key.
-'''
+        else:
+          expiration = "Expires: "+outgoing[loop]["o"]["expiration"]
+          emO.add_field(name=outgoing[loop]["o"]["challenged"], value = expiration, inline=False)
+          print("RUNNN")
+      emI = discord.Embed(title = "✉️ Mail Incoming", color = 15417396)
+      await ctx.send(embed=emO)'''
+  
   @commands.command(brief = "Play a team game.", description = "Play a team game.")
   @commands.cooldown(1, 3600, commands.BucketType.user)
   async def game(self, ctx):
     pieces = ["https://imgur.com/ap3xhAx.png","https://imgur.com/YlXwca6.png","https://imgur.com/bAzulbm.png","https://imgur.com/rTy01R7.png","https://imgur.com/XK1N3v6.png","https://imgur.com/Uq77WqN.png","https://imgur.com/QlRRgZa.png","https://imgur.com/kEw5Xy5.png", "https://imgur.com/vHYfksw.png", "https://imgur.com/ATa2JNN.png", "https://imgur.com/oWVIRWT.png"]
     allEra = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣']
     era = ['5️⃣', '4️⃣', '3️⃣', '4️⃣', '2️⃣', '5️⃣', '4️⃣', '4️⃣','2️⃣','3️⃣','5️⃣']
-    composer = ["rachmaninoff", "schubert", "mozart", "bizet", "bach", "stravinsky", "smetana", "bazzini", "handel", "mozart"]
-    typeOfPiece = ["duet", "duet", "symphony", "symphony", "solo", "symphony", "symphony", "solo", "other","symphony", "symphony"]
+    composer = ["rachmaninoff", "schubert", "mozart", "bizet", "bach", "stravinsky", "smetana", "bazzini", "handel", "mozart", "copland"]
+    typeOfPiece = ["duet", "duet", "symphony", "symphony", "solo", "symphony", "symphony", "solo", "other","symphony", "symphony", "other"]
     piece, temp = random.randint(0,10), getUserData(ctx.author.id)
     tem = temp["team"]
     if tem is None:

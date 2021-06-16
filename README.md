@@ -27,6 +27,7 @@ A TwoSet/music themed discord bot started in honor of Brett's birthday, and hope
 - **[NOT ADDED]** Stats: View all your stats.
 - **[WIP]** Scale: Gives a random scale to play
 
+
 ### Teams 🤝
 
 - Ban: Put in a ban appeal (can lead to a perma-ban)

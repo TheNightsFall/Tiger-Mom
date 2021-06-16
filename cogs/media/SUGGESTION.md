@@ -11,7 +11,7 @@ So in order to (attempt to) solve this problem, we propose every certain interva
 - [ ] Text channel for encouragements or general comments on performances, including applause
 - [ ] Text channel for announcing order of performances (could be posted by a bot or a person)
 - [x] A google account hosting a sign-up form (Fifteennotesasecond@gmail.com)
-- [x] Moderators (currently consisting of one Mr. Oppai Dragon)
+- [x] Moderators (currently consisting of one Shobi)
 
 #### How it would Work
 

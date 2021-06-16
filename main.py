@@ -55,7 +55,10 @@ async def on_command_error(ctx, error):
     await ctx.send("Command doesn't exist lah!")
   elif isinstance(error, commands.CommandOnCooldown):
     pass
+  elif isinstance(error, discord.Forbidden):
+    await ctx.send("I don't have permission to run this command.")
   else:
+    await ctx.send(f"{error}. Blame nights, she terrible at coding. No wonder she no doctor lah.")
     raise error
 
 @tasks.loop(seconds = 10) # Changes status upon a TS Bday

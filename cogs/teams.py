@@ -7,6 +7,8 @@ import asyncio
 import math
 import random
 import datetime
+from datetime import timedelta
+import pytz
 cluster = pymongo.MongoClient(os.getenv('THING'))
 userData = cluster["tigermom"]["userstats"]
 teamData = cluster["tigermom"]["teams"]
@@ -28,8 +30,7 @@ class Teams(commands.Cog):
         teamJoin += x
         teamJoin += " "
       teamJoin = teamJoin[:-1]
-      for x in userData.find({"team": teamJoin}):
-        memberCount += 1
+      for x in userData.find({"team": teamJoin}): memberCount += 1
       if memberCount == 0:
         await ctx.send("Team doesn't exist. Use 'p.create' to make a team.")
         reset = 1
@@ -142,7 +143,7 @@ class Teams(commands.Cog):
   #Update this more later
   @commands.command(aliases = ["th", "thelp", "teamh"], brief = "Overview of teams.", description = "An overview of teams.")
   async def teamhelp(self, ctx):
-    hContent = '''
+    hContent = ''' 
     ===================================
     **The Basics:**
     ===================================
@@ -155,11 +156,11 @@ class Teams(commands.Cog):
     icon, send challenges, and have more
     weight in ban appeals.
 
-    '''
+    ''' 
     em = discord.Embed(title = "An overview of teams...", color = 15417396, description = hContent)
     await ctx.send(embed = em)
   
-  @commands.command(brief = "Put in a ban appeal.", description = "Put in a ban appeal.")
+  @commands.command(aliases = ["kick"], brief = "Put in a ban appeal.", description = "Put in a ban appeal.")
   @commands.cooldown(1, 345600, commands.BucketType.user)
   async def ban(self, ctx, user:discord.Member = None):
       if user == None:
@@ -175,8 +176,7 @@ class Teams(commands.Cog):
         return
       banListTemp = getTeamData(team)
       captains = banListTemp["captains"]
-      bannerIsCap = 0
-      banneeIsCap = 0
+      bannerIsCap, banneeIsCap = 0
       for captain in captains:
         if str(captain) == str(ctx.author.id):
           bannerIsCap = 1
@@ -215,48 +215,142 @@ class Teams(commands.Cog):
               return
         x = str(banApp)+": 2" if bannerIsCap == 1 else str(banApp)+": 1"
         teamData.update_one({"tn": team}, {"$push": {"pending": x}})
-        await ctx.send("Your vote has been recorded.")
-      
-  @commands.command(brief = "Play a team game.", description = "Play a team game.")
-  async def game(self, ctx):
-    pieces = ["https://imgur.com/ap3xhAx.png","https://imgur.com/YlXwca6.png","https://imgur.com/bAzulbm.png","https://imgur.com/rTy01R7.png","https://imgur.com/XK1N3v6.png","https://imgur.com/Uq77WqN.png","https://imgur.com/QlRRgZa.png","https://imgur.com/kEw5Xy5.png"]
-    all = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣']
-    era = ['5️⃣', '4️⃣', '3️⃣', '4️⃣', '2️⃣', '5️⃣', '4️⃣', '4️⃣',]
-    composer = ["rachmaninoff", "schubert", "mozart", "bizet", "bach", "stravinsky", "smetana", "bazzini"]
-    piece = random.randint(0,7)
+        await ctx.send(":ballot_box_with_checkmark: Your vote has been recorded.")
+    #self.bot.get_user(int(id))
+  
+
+  @commands.command(aliases = ["chal"], brief = "Challenge a team.", description = "Challenge a team.")
+  @commands.cooldown(1, 3600, commands.BucketType.user)
+  async def challenge(self, ctx, *args):
     temp = getUserData(ctx.author.id)
+    team1 = temp["team"]
+    if team1 is None:
+      await ctx.send("You're not part of a team!")
+      return
+    team = getTeamData(team1)
+    teamChal = ""
+    for x in args:
+        teamChal += x
+        teamChal += " "
+    teamChal = teamChal[:-1]
+    if teamChal == team["tn"]:
+      await ctx.send("You can't challenge your own team!")
+      return
+    elif teamChal == "":
+      await ctx.send("You must specify a team to challenge!")
+      return
+    for x in teamData.find({"tn": teamChal}):
+      utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+      expiration = utcNow + timedelta(days=1)
+      expiration = expiration.strftime("%m/%d/%Y %H:%M:%S")	
+      teamData.update_one({"tn": team1}, {"$push" :{"challenges": {"o": {"expiration": expiration, "challenged": teamChal}}}})
+      teamData.update_one({"tn": teamChal}, {"$push" :{"challenges": {"i": {"expiration": expiration, "challenged": team1}}}})
+      await ctx.send(f"Challenge sent to {teamChal}.")
+      return
+    await ctx.send(f"Team {teamChal} does not exist.")
+    #outgoing challenges will be formatted in mongo as oteamname timeexpires
+  '''
+  @commands.command(aliases=["mail","messages"], brief = "View your ingoing and outgoing challenges.", description = "View your ingoing and outgoing challenges.")
+  @commands.cooldown(1, 60, commands.BucketType.user)
+  async def mailbox(self, ctx):
+    temp = getUserData(ctx.author.id)
+    team = temp["team"]
+    if team is None:
+      await ctx.send("You're not part of a team!")
+      return
+    team = getTeamData(team)
+    inbox = team["challenges"]
+    ingoing = []
+    outgoing = []
+    if inbox == []:
+      em = discord.Embed(title = "✉️ Inbox", description = "It's empty.", color =	4373885)
+      await ctx.send(embed = em)
+      return
+    else:
+      for mail in inbox:
+        if str(mail)[2] == "o":
+          outgoing.append(mail)
+        else:
+          ingoing.append(mail)
+      current = datetime.datetime.now()
+      emO = discord.Embed(title = "✉️ Mail Outgoing", color = 15417396)
+      loop = -1
+      for x in range(1,len(outgoing)):
+        loop += 1
+        timeChal = datetime.datetime.strptime(outgoing[loop]["o"]["expiration"], "%m/%d/%Y %H:%M:%S")
+        if current >= timeChal:
+          del outgoing[loop]
+          #THESE DON'T WORK bc your "tn" isn't team, it should be team["name"] or wahtever i called it in Mongo
+          teamData.update({"tn": team["tn"]}, {"$pull": {"challenges": {"o": {"expiration": outgoing[loop]["o"]["expiration"], "challenged": outgoing[loop]["o"]["challenged"]}}}})
+          #Idk why this one doesn't work
+          teamData.update({"tn": outgoing[loop]["o"]["challenged"]}, {"$pull": {"challenges": {"i": {"expiration": outgoing[loop]["o"]["expiration"], "challenged": team}}}})
+          print("ran.")
+        else:
+          expiration = "Expires: "+outgoing[loop]["o"]["expiration"]
+          emO.add_field(name=outgoing[loop]["o"]["challenged"], value = expiration, inline=False)
+          print("RUNNN")
+      emI = discord.Embed(title = "✉️ Mail Incoming", color = 15417396)
+      await ctx.send(embed=emO)'''
+  
+  @commands.command(brief = "Play a team game.", description = "Play a team game.")
+  @commands.cooldown(1, 3600, commands.BucketType.user)
+  async def game(self, ctx):
+    pieces = ["https://imgur.com/ap3xhAx.png","https://imgur.com/YlXwca6.png","https://imgur.com/bAzulbm.png","https://imgur.com/rTy01R7.png","https://imgur.com/XK1N3v6.png","https://imgur.com/Uq77WqN.png","https://imgur.com/QlRRgZa.png","https://imgur.com/kEw5Xy5.png", "https://imgur.com/vHYfksw.png", "https://imgur.com/ATa2JNN.png", "https://imgur.com/oWVIRWT.png"]
+    allEra = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣']
+    era = ['5️⃣', '4️⃣', '3️⃣', '4️⃣', '2️⃣', '5️⃣', '4️⃣', '4️⃣','2️⃣','3️⃣','5️⃣']
+    composer = ["rachmaninoff", "schubert", "mozart", "bizet", "bach", "stravinsky", "smetana", "bazzini", "handel", "mozart", "copland"]
+    typeOfPiece = ["duet", "duet", "symphony", "symphony", "solo", "symphony", "symphony", "solo", "other","symphony", "symphony", "other"]
+    piece, temp = random.randint(0,10), getUserData(ctx.author.id)
     tem = temp["team"]
+    if tem is None:
+      await ctx.send("You're not part of a team!")
+      return
     temp = getTeamData(tem)
-    validMembers = temp["members"]
-    print(validMembers)
-    points = 0
+    validMembers, points, questionsRight = temp["members"], 0, 0
     em = discord.Embed(title = "Question 1 - Guess the era of the piece shown.", description = "Reactions from left to right, renaissance, baroque, classical, romantic, 20th century, contemporary.",color = 15417396)
     em.set_image(url=pieces[piece])
     em.set_footer(text=f"You have 6 minutes to finish the game as a team {tem}.")
     msg = await ctx.send(embed=em)
-    for any in all:
+    for any in allEra:
       await msg.add_reaction(any)
     try:
       answer = await self.bot.wait_for('reaction_add', check= lambda reaction, user: user.id in validMembers, timeout=600)
-      while str(answer[0]) not in str(all):
-        print("statement running.")
+      while str(answer[0]) not in str(allEra):
         answer = await self.bot.wait_for('reaction_add', check= lambda reaction, user: user.id in validMembers)
       if str(answer[0]) == str(era[piece]):
         points += 1
-      em = discord.Embed(title = "Question 2 - Guess the composer of the piece, by last name.", description = "Send it in a message.", color = 15417396)
+        questionsRight += 1
+      await msg.remove_reaction(answer[0], answer[1])
+      em = discord.Embed(title = "Question 2 - Guess the composer of the piece, by last name.", description = "Send it in a message, beginning with 'a: '", color = 15417396)
       em.set_image(url=pieces[piece])
       em.set_footer(text=f"You have 6 minutes to finish the game as a team {tem}.")
       await ctx.send(embed=em)
-      Answer = await self.bot.wait_for('message', check = lambda message, user: user.id in validMembers)
-      print(Answer)
-      if str(Answer.lower()) == str(composer[piece]):
+      Answer = await self.bot.wait_for('message', check = lambda message: message.author.id in validMembers)
+      while Answer.content.lower().startswith("a: ") == False:
+        Answer = await self.bot.wait_for('message', check = lambda message: message.author.id in validMembers)
+      if str(Answer.content.lower()) == str(composer[piece]):
         points += 3
-        print("corrrrrect")
-      em = discord.Embed(title = "Question 3 - What type of piece was it originally?", description = "Valid answers include solo, concerto, symphony, concert band, jazz band, string orchestra, duet, trio, quartet, quintet.")
+        questionsRight += 1
+      await Answer.delete()
+      del Answer
+      em = discord.Embed(title = "Question 3 - What type of piece was it originally?", description = "Valid answers are solo, concerto, symphony, concert band, jazz band, string orchestra, duet, trio, quartet, quintet, and other. Send it in a message, beginning with 'a: '", color = 15417396)
       em.set_image(url=pieces[piece])
       em.set_footer(text=f"You have 6 minutes to finish the game as a team {tem}.")
+      await ctx.send(embed=em)
+      Answer = await self.bot.wait_for('message', check = lambda message: message.author.id in validMembers)
+      while Answer.content.lower().startswith("a: ") == False:
+        Answer = await self.bot.wait_for('message', check = lambda message: message.author.id in validMembers)
+      if str(Answer.content.lower()) == str(typeOfPiece[piece]):
+        points += 3
+        questionsRight += 1
+      await Answer.delete()
+      current = temp["xp"] + points
+      #Need to check if team has done a quest for the day
+      teamData.update_one({"tn": tem}, {"$set" :{"xp": current}})
+      await ctx.send(f"Your team got {questionsRight} questions correct, gaining {points} xp.")
     except asyncio.TimeoutError:
       await ctx.send(f"You too slow lah! Game over with {points} points.")
+    
 
 #Helper function uwu
 def getUserData(x):
@@ -271,7 +365,7 @@ def getUserData(x):
 def getTeamData(x):
   userTeam = teamData.find_one({"tn": x})
   if userTeam is None:
-    newTeam = {"tn": x, "xp": 0, "questday": 0, "gamenum": 0, "members": [], "captains": [], "bans": [], "pending": [], "challenges": []}
+    newTeam = {"tn": x, "xp": 0, "questday": 0, "gamenum": 0, "members": [], "captains": [], "bans": [], "pending": [], "challenges": [], "accepted": []}
     teamData.insert_one(newTeam)
   userTeam = teamData.find_one({"tn": x})
   return userTeam

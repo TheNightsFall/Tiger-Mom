@@ -249,10 +249,11 @@ class Teams(commands.Cog):
       return
     await ctx.send(f"Team {teamChal} does not exist.")
     #outgoing challenges will be formatted in mongo as oteamname timeexpires
-  '''
+  
   @commands.command(aliases=["mail","messages"], brief = "View your ingoing and outgoing challenges.", description = "View your ingoing and outgoing challenges.")
   @commands.cooldown(1, 60, commands.BucketType.user)
   async def mailbox(self, ctx):
+    liszt = ["▶️"]
     temp = getUserData(ctx.author.id)
     team = temp["team"]
     if team is None:
@@ -263,8 +264,8 @@ class Teams(commands.Cog):
     ingoing = []
     outgoing = []
     if inbox == []:
-      em = discord.Embed(title = "✉️ Inbox", description = "It's empty.", color =	4373885)
-      await ctx.send(embed = em)
+      emI = discord.Embed(title = "✉️ Inbox", description = "It's empty.", color =	4373885)
+      await ctx.send(embed = emI)
       return
     else:
       for mail in inbox:
@@ -274,23 +275,57 @@ class Teams(commands.Cog):
           ingoing.append(mail)
       current = datetime.datetime.now()
       emO = discord.Embed(title = "✉️ Mail Outgoing", color = 15417396)
+      emO.set_footer(text="⏰ Go practice lah!")
+      emI = discord.Embed(title = "✉️ Inbox", color = 15417396)
+      emI.set_footer(text="⏰ Go practice lah!")
       loop = -1
-      for x in range(1,len(outgoing)):
+      #Makes the outgoing embed
+      for x in outgoing:
         loop += 1
         timeChal = datetime.datetime.strptime(outgoing[loop]["o"]["expiration"], "%m/%d/%Y %H:%M:%S")
         if current >= timeChal:
-          del outgoing[loop]
-          #THESE DON'T WORK bc your "tn" isn't team, it should be team["name"] or wahtever i called it in Mongo
+          #Pulling stuff if it's expired from your team, then from other team
+          print(outgoing[loop]["o"]["challenged"])
           teamData.update({"tn": team["tn"]}, {"$pull": {"challenges": {"o": {"expiration": outgoing[loop]["o"]["expiration"], "challenged": outgoing[loop]["o"]["challenged"]}}}})
-          #Idk why this one doesn't work
-          teamData.update({"tn": outgoing[loop]["o"]["challenged"]}, {"$pull": {"challenges": {"i": {"expiration": outgoing[loop]["o"]["expiration"], "challenged": team}}}})
-          print("ran.")
+          teamData.update({"tn": outgoing[loop]["o"]["challenged"]}, {"$pull": {"challenges": {"i": {"expiration": outgoing[loop]["o"]["expiration"], "challenged": team["tn"]}}}})
+          del outgoing[loop]
         else:
           expiration = "Expires: "+outgoing[loop]["o"]["expiration"]
           emO.add_field(name=outgoing[loop]["o"]["challenged"], value = expiration, inline=False)
-          print("RUNNN")
-      emI = discord.Embed(title = "✉️ Mail Incoming", color = 15417396)
-      await ctx.send(embed=emO)'''
+      if loop == -1:
+        emO.add_field(name="Sorry, there's nothing outgoing.", value = "you can use p.chal <team name> to challenge another team.")
+      loop = -1
+      #Now to put stuff in ingoing.
+      for x in ingoing:
+        loop += 1
+        timeChal = datetime.datetime.strptime(ingoing[loop]["i"]["expiration"], "%m/%d/%Y %H:%M:%S")
+        if current >= timeChal:
+          #Deleting things, yet to have tested if this works
+          print(ingoing[loop]["i"]["challenged"])
+          teamData.update({"tn": team["tn"]}, {"$pull": {"challenges": {"i": {"expiration": ingoing[loop]["i"]["expiration"], "challenged": ingoing[loop]["i"]["challenged"]}}}})
+          teamData.update({"tn": ingoing[loop]["i"]["challenged"]}, {"$pull": {"challenges": {"o": {"expiration": ingoing[loop]["i"]["expiration"], "challenged": team["tn"]}}}})
+          del outgoing[loop]
+        else:
+          expiration = "Expires: "+ingoing[loop]["i"]["expiration"]
+          emI.add_field(name=ingoing[loop]["i"]["challenged"], value = expiration, inline=False)
+      if loop == -1:
+        emI.add_field(name="Sorry, there's nothing incoming.", value = "Maybe get some more frenemies? OR GO PRACTICE.")
+      msg = await ctx.send(embed=emI)
+      sent = 0
+      await msg.add_reaction("▶️")
+      try:
+        while str(sent).isnumeric() == True:
+          answer = await self.bot.wait_for('reaction_add', check= lambda reaction, user: user.id ==ctx.author.id, timeout=60)
+          if str(answer[0]) in str(liszt):
+            if sent == 0:
+              await msg.edit(embed=emO)
+              sent = 1
+            else:
+              await msg.edit(embed=emI)
+              sent = 0
+          await msg.remove_reaction(answer[0], answer[1])
+      except asyncio.TimeoutError:
+        pass
   
   @commands.command(brief = "Play a team game.", description = "Play a team game.")
   @commands.cooldown(1, 3600, commands.BucketType.user)

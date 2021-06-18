@@ -327,6 +327,12 @@ class Teams(commands.Cog):
       except asyncio.TimeoutError:
         pass
   
+  @mailbox.error
+  async def mail_error(self, ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+      await ctx.send(f"Wait {round(error.retry_after,3)} seconds. I sichuan your pepper!!")
+    else:
+      raise error
   @commands.command(brief = "Play a team game.", description = "Play a team game.")
   @commands.cooldown(1, 3600, commands.BucketType.user)
   async def game(self, ctx):

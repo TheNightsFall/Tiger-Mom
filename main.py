@@ -15,6 +15,7 @@ from keep_alive import keep_alive
 #For color conversions to decimal: https://convertingcolors.com/
 #kill 1 in shell if rate limited
 
+
 intents = discord.Intents.default()
 intents.members = True
 intents.guilds = True
@@ -24,6 +25,7 @@ intents.voice_states = True
 
 cluster = pymongo.MongoClient(os.getenv('THING'))
 guildData = cluster["tigermom"]["guilds"]
+teamData = cluster["tigermom"]["teams"]
 bot = commands.Bot(command_prefix="p.", 
 case_insensitive=True, 
 intents=intents, 
@@ -36,10 +38,11 @@ bot.help_command = PrettyHelp(navigation = nav, color=16092072, active_time=40)
 @bot.event
 async def on_ready():
   print('Logged in as {0.user}. Get practicing lah!'.format(bot))
-  await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you practice"))
+  await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you practice | p.help"))
   #guildData.update_many({}, {"$set": {"queuelink": []}})
   #guildData.update_many({}, {"$set": {"queue": []}})
   checkDate.start()
+  #checkChal.start()
 
 @bot.event
 async def on_message(message):
@@ -67,11 +70,17 @@ async def checkDate():
     utcNow = pytz.utc.localize(datetime.datetime.utcnow())
     timeNow = utcNow.strftime("%d %b")
     if timeNow == "23 Mar":
-      await bot.change_presence(activity=discord.Activity (type=discord.ActivityType.playing, name="Happy Birthday Eddy!"))
+      await bot.change_presence(activity=discord.Activity (type=discord.ActivityType.playing, name="Happy Birthday Eddy! | p.help"))
     elif timeNow == "3 Mar":
-      await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name="Happy Birthday Brett!"))
+      await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name="Happy Birthday Brett! | p.help"))
     else:
-      await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you practice"))
+      await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you practice | p.help"))
+    await asyncio.sleep(5)
+
+@tasks.loop(seconds = 10)
+async def checkChal():
+  while True:
+    no = list(teamData.find({"accepted": {"$type": "array", "$ne": []}}))
     await asyncio.sleep(5)
 
 if __name__ == "__main__":

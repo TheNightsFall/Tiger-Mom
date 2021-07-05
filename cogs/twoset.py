@@ -51,15 +51,25 @@ class Twoset(commands.Cog):
   
   @commands.command(aliases = ["socials"], brief="Gets a list of TwoSet's social media accounts.", description = "Gets a list of TwoSet's social media accounts")
   async def tssocials(self, ctx):
-    em = discord.Embed(title="TwoSet social links", color = 0)
+    desc = '''----------------------------------------------------------
+       [YouTube](https://youtube.com/c/twosetviolin/videos)
+       [TikTok](https://www.tiktok.com/@twosetviolin?lang=en)
+       [Instagram](https://www.instagram.com/twosetviolin/?hl=en)
+       [Twitter](https://twitter.com/TwoSetViolin?ref_src=twsrc%5Egoogle%7Ctwcamp%5Eserp%7Ctwgr%5Eauthor)
+       [Facebook](https://www.facebook.com/TwoSetViolin)
+       [Personal website](https://www.twosetviolin.com/)
+       ----------------------------------------------------------
+       [r/lingling40hrs](https://www.reddit.com/r/lingling40hrs/)
+       [TwoSetApparel](https://twosetapparel.com/)
+       ----------------------------------------------------------
+       "TwoSet Violin – founded in 2014 by Australian duo Brett Yang and Eddy Chen – first went viral with their funny and sometimes painfully accurate videos depicting life as a classical musician. With over 5,000,000 followers across social media and over one billion views, TwoSet inspires musicians worldwide with humor and a relatable ‘imperfectness.’"
+
+          - From their website
+       '''
+    em = discord.Embed(title="TwoSet social links", description = desc, color = 0)
     em.set_thumbnail(url="https://i.pinimg.com/originals/95/7c/27/957c2719b2863d68ae147164d0f4b19a.jpg")
-    em.add_field(name="YT", value="[Link](https://youtube.com/c/twosetviolin/videos)")
-    em.add_field(name="TikTok", value="[Link](https://www.tiktok.com/@twosetviolin?lang=en)", inline=False)
-    em.add_field(name="Instagram", value="[Link](https://www.instagram.com/twosetviolin/?hl=en)", inline=False)
-    em.add_field(name="Twitter", value = "[Link](https://twitter.com/TwoSetViolin?ref_src=twsrc%5Egoogle%7Ctwcamp%5Eserp%7Ctwgr%5Eauthor)", inline=False)
-    em.add_field(name="Facebook", value="[Link](https://www.facebook.com/TwoSetViolin)", inline=False)
-    em.set_footer(text="Missed anything? DM Nights!")
-    await ctx.send(embed =em)
+    em.set_footer(text="⏰ Have you practiced?")
+    await ctx.send(embed = em)
   
   @commands.command(brief = "iNtErEstInG.", description = "iNtErEstInG.")
   async def interesting(self, ctx, user:discord.Member = None):

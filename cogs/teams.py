@@ -17,7 +17,8 @@ teamData = cluster["tigermom"]["teams"]
 class Teams(commands.Cog):
   def __init__(self, bot):
     self.bot = bot
-
+  
+  
   @commands.command(aliases = ["j"], brief = "Join a team.", description = "Join a team.")
   @commands.cooldown(1, 172800, commands.BucketType.user)
   async def join(self, ctx, *args):
@@ -140,25 +141,6 @@ class Teams(commands.Cog):
           await ctx.send(f"Successfully created team {teamJoin}.")
         else:
           await ctx.send("That team name is already taken, please try again.")
-  #Update this more later
-  @commands.command(aliases = ["th", "thelp", "teamh"], brief = "Overview of teams.", description = "An overview of teams.")
-  async def teamhelp(self, ctx):
-    hContent = ''' 
-    ===================================
-    **The Basics:**
-    ===================================
-    Each team can have up to 10 members, 
-    and technically up to 10 captains 
-    as well. All members can view the
-    team's inbox, put/vote in ban 
-    appeals, and accept challenges, but 
-    captains can change the team name,
-    icon, send challenges, and have more
-    weight in ban appeals.
-
-    ''' 
-    em = discord.Embed(title = "An overview of teams...", color = 15417396, description = hContent)
-    await ctx.send(embed = em)
   
   @commands.command(aliases = ["kick"], brief = "Put in a ban appeal.", description = "Put in a ban appeal.")
   @commands.cooldown(1, 345600, commands.BucketType.user)
@@ -216,9 +198,86 @@ class Teams(commands.Cog):
         x = str(banApp)+": 2" if bannerIsCap == 1 else str(banApp)+": 1"
         teamData.update_one({"tn": team}, {"$push": {"pending": x}})
         await ctx.send(":ballot_box_with_checkmark: Your vote has been recorded.")
-    #self.bot.get_user(int(id))
-  
 
+  @commands.command(aliases = ["capt", "cap", "promote"])
+  @commands.cooldown(1, 60, commands.BucketType.user)
+  async def captains(self, ctx, user:discord.Member = None):
+    if user is None:
+      await ctx.send("You must pick someone to promote to captain!")
+      ctx.command.reset_cooldown(ctx)
+      return
+    temp = getUserData(ctx.author.id)
+    team = temp["team"]
+    if team == "None":
+      await ctx.send("You're not part of a team lah!")
+      ctx.command.reset_cooldown(ctx)
+      return
+    Temp = getTeamData(team)
+    tn = Temp["tn"]
+    captains = Temp["captains"]
+    uIC = 0
+    newCapt = self.bot.get_user(user.id)
+    for captain in captains:
+      if captain == user.id:
+        await ctx.send("This person is already a captain.")
+        ctx.command.reset_cooldown(ctx)
+        return
+      elif captain == ctx.author.id:
+        uIC = 1
+    if uIC == 1:
+      teamData.update_one({"tn": tn}, {"$push" :{"captains": user.id}})
+      await ctx.send(f"Promoted {newCapt} to captain.")
+    else:
+      await ctx.send(f"You don't have permission to promote {newCapt} to captain")
+      ctx.command.reset_cooldown(ctx)
+      return
+  
+  @commands.command(aliases = ["display", "dis", "t"], brief = "Displays your team and its members.", description = "Displays your team and its members.")
+  @commands.cooldown(1, 30, commands.BucketType.user)
+  async def team(self, ctx, *args):
+    team = ""
+    for x in args:
+        team += x
+        team += " "
+    if team == "":
+      temp = getUserData(ctx.author.id)
+      team = temp["team"]
+      if team is None:
+        await ctx.send("You're not part of a team!")
+        ctx.command.reset_cooldown(ctx)
+        return
+    else:
+      team = team[:-1]
+    team = teamData.find_one({"tn": team})
+    if team is None:
+      await ctx.send("Team doesn't exist. Make sure to capitalize and spell correctly!")
+      ctx.command.reset_cooldown(ctx)
+      return
+    names = team["members"]
+    xp = team["xp"]
+    desc = f'''Total xp: {xp}
+    ----------------------
+    '''
+    em = discord.Embed(title = team["tn"], color = 15417396, description = desc)
+      
+    em.set_footer(text="⏰ Go practice lah!")
+    loop = 0
+    for name in names:
+      loop += 1
+      user = getUserData(name)
+      bal = user["bubbleTea"]
+      displayName = str(self.bot.get_user(int(name)))
+      name = str(loop)+". "+displayName[:-5]
+      em.add_field(name=name, value = f"Bal: {bal}", inline=False)
+    await ctx.send(embed=em)
+  
+  @team.error
+  async def team_error(self, ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+      await ctx.send(f"Wait {round(error.retry_after,3)} seconds. I sichuan your pepper!!")
+    else:
+      raise error
+  
   @commands.command(aliases = ["chal"], brief = "Challenge a team.", description = "Challenge a team.")
   @commands.cooldown(1, 3600, commands.BucketType.user)
   async def challenge(self, ctx, *args):
@@ -239,6 +298,9 @@ class Teams(commands.Cog):
     elif teamChal == "":
       await ctx.send("You must specify a team to challenge!")
       return
+    if team["accepted"] != []:
+      await ctx.send("You cannot send challenges while in one.")
+      return
     for x in teamData.find({"tn": teamChal}):
       utcNow = pytz.utc.localize(datetime.datetime.utcnow())
       expiration = utcNow + timedelta(days=1)
@@ -248,8 +310,196 @@ class Teams(commands.Cog):
       await ctx.send(f"Challenge sent to {teamChal}.")
       return
     await ctx.send(f"Team {teamChal} does not exist.")
-    #outgoing challenges will be formatted in mongo as oteamname timeexpires
-  
+
+  @commands.command(aliases = ["accepted", "acc"], brief = "Accept a challenge from another team.", desription = "Accept a challenge from another team.")
+  @commands.cooldown(1, 86400, commands.BucketType.user) #86400
+  async def accept(self, ctx, *args):
+    teamChal = ""
+    for x in args:
+        teamChal += x
+        teamChal += " "
+    teamChal = teamChal[:-1]
+    if teamChal == "":
+      await ctx.send("You must specify a team's challenge to accept lah!")
+      return
+    temp = getUserData(ctx.author.id)
+    team = temp["team"]
+    if team is None:
+      await ctx.send("You're not part of a team!")
+      return
+    team = getTeamData(team)
+    if teamChal == team["tn"]:
+      await ctx.send("You can't challenge your own team lah!")
+      return
+    if team["accepted"] == []:
+      pass
+    else:
+      await ctx.send("Your team is in the middle of a challenge. You currently cannot send nor accept any additional challenges.")
+      return
+    chal = team["challenges"]
+    outCap =team["captains"]
+    tn = team["tn"]
+    inb = []
+    out = []
+    for mail in chal:
+      if str(mail)[2] == "i":
+        inb.append(mail)
+      else:
+        out.append(mail)
+    
+    try:
+      userTeam = teamData.find_one({"tn": teamChal})
+      if userTeam["accepted"] == []:
+        pass
+      else:
+        await ctx.send(f"Team {teamChal} is already participating in a challenge.")
+        return
+    except:
+      await ctx.send("Team does not exist lah! Check your spelling and capitalization!")
+      return
+    current = datetime.datetime.now()
+    inCap = userTeam["captains"]
+    loop = -1
+    for x in inb:
+      loop += 1
+      timeChal = datetime.datetime.strptime(inb[loop]["i"]["expiration"], "%m/%d/%Y %H:%M:%S")
+      if inb[loop]["i"]["challenged"] == teamChal:
+        teamData.update({"tn": team["tn"]}, {"$pull": {"challenges": {"i": {"expiration": inb[loop]["i"]["expiration"], "challenged": inb[loop]["i"]["challenged"]}}}})
+        teamData.update({"tn": inb[loop]["i"]["challenged"]}, {"$pull": {"challenges": {"o": {"expiration": inb[loop]["i"]["expiration"], "challenged": team["tn"]}}}})
+        del inb[loop]
+        if current <= timeChal:
+          utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+          expiration = utcNow + timedelta(days=1)
+          expiration = expiration.strftime("%m/%d/%Y %H:%M:%S")	
+          teamData.update({"tn": team["tn"]}, {"$push": {"accepted": {"expiration": expiration, "challenged": teamChal, "bal": 0}}})
+          teamData.update({"tn": teamChal}, {"$push": {"accepted": {"expiration": expiration, "challenged": team["tn"], "bal": 0}}})
+          emO = discord.Embed(title = "ATTENTION! CHALLENGE STARTED!", description = f"Hello, captains of {teamChal}! Team {tn} has accepted your challenge. For the next 24 hours, you will be competing against them to gather the most bubble tea. You will also be unable to accept or send out any other challenges.", color =	4373885)
+          emI = discord.Embed(title = "ATTENTION! CHALLENGE STARTED!", description = f"Hello, captains of {tn}! Captain {ctx.author} has accepted a challenge from {teamChal}! For the next 24 hours, you will be competing against them to gather the most bubble tea. You will also be unable to accept or send out any other challenges.", color = 4373885)
+          for captain in outCap:
+            check = self.bot.get_user(int(captain))
+            channel = await check.create_dm()
+            await channel.send(embed = emI)
+          for captain in inCap:
+            check = self.bot.get_user(int(captain))
+            channel = await check.create_dm()
+            await channel.send(embed = emO)
+          loop2 = -1
+          for x in inb:
+            loop2 += 1
+            timeChal = datetime.datetime.strptime(inb[loop2]["i"]["expiration"], "%m/%d/%Y %H:%M:%S")
+            timeNew = timeChal + timedelta(days=1)
+            expiration = timeNew.strftime("%m/%d/%Y %H:%M:%S")
+            teamData.update({"tn": team["tn"]}, {"$pull": {"challenges": {"i": {"expiration": inb[loop2]["i"]["expiration"], "challenged": inb[loop2]["i"]["challenged"]}}}})
+            teamData.update({"tn": inb[loop2]["i"]["challenged"]}, {"$pull": {"challenges": {"o": {"expiration": inb[loop2]["i"]["expiration"], "challenged": team["tn"]}}}})
+            teamData.update({"tn": team["tn"]}, {"$push": {"challenges": {"i": {"expiration": expiration, "challenged": inb[loop2]["i"]["challenged"]}}}})
+            teamData.update({"tn": inb[loop2]["i"]["challenged"]}, {"$push": {"challenges": {"o": {"expiration": expiration, "challenged": team["tn"]}}}})
+          loop3 = -1 #kill me now
+          for x in out:
+            loop3 += 1
+            timeChal = datetime.datetime.strptime(out[loop3]["o"]["expiration"], "%m/%d/%Y %H:%M:%S")
+            timeNew = timeChal + timedelta(days=1)
+            expiration = timeNew.strftime("%m/%d/%Y %H:%M:%S")
+            teamData.update({"tn": team["tn"]}, {"$pull": {"challenges": {"o": {"expiration": out[loop3]["o"]["expiration"], "challenged": out[loop3]["o"]["challenged"]}}}})
+            teamData.update({"tn": out[loop3]["o"]["challenged"]}, {"$pull": {"challenges": {"i": {"expiration": out[loop3]["o"]["expiration"], "challenged": team["tn"]}}}})
+            teamData.update({"tn": team["tn"]}, {"$push": {"challenges": {"o": {"expiration": expiration, "challenged": out[loop3]["o"]["challenged"]}}}})
+            teamData.update({"tn": out[loop3]["o"]["challenged"]}, {"$push": {"challenges": {"i": {"expiration": expiration, "challenged": team["tn"]}}}})
+          return
+    await ctx.send("You don't have any incoming challenges lah!")
+        
+        
+  @commands.command(aliases = ["dec", "reject", "whyyougottabesorude"], brief = "Decline incoming challenges.", description = "Decline incoming challenges.")
+  @commands.cooldown(1,60, commands.BucketType.user)
+  async def decline(self, ctx, *args):
+    teamChal = ""
+    for x in args:
+        teamChal += x
+        teamChal += " "
+    teamChal = teamChal[:-1]
+    if teamChal == "":
+      await ctx.send("You must specify a team's challenge to decline lah!")
+      ctx.command.reset_cooldown(ctx)
+      return
+    temp = getUserData(ctx.author.id)
+    team = temp["team"]
+    if team is None:
+      await ctx.send("You're not part of a team!")
+      return
+    team = getTeamData(team)
+    chal = team["challenges"]
+    inb = []
+    for mail in chal:
+      if str(mail)[2] == "i":
+        inb.append(mail)
+    if inb == []:
+      await ctx.send("Your team has no incoming challenges.")
+      return
+    current = datetime.datetime.now()
+    loop = -1
+    chalDec = 0
+    for x in inb:
+      loop += 1
+      timeChal = datetime.datetime.strptime(inb[loop]["i"]["expiration"], "%m/%d/%Y %H:%M:%S")
+      if current >= timeChal or inb[loop]["i"]["challenged"] == teamChal:
+        teamData.update({"tn": team["tn"]}, {"$pull": {"challenges": {"i": {"expiration": inb[loop]["i"]["expiration"], "challenged": inb[loop]["i"]["challenged"]}}}})
+        teamData.update({"tn": inb[loop]["i"]["challenged"]}, {"$pull": {"challenges": {"o": {"expiration": inb[loop]["i"]["expiration"], "challenged": team["tn"]}}}})
+        chalDec += 1
+    if chalDec == 0:
+      await ctx.send(f"No incoming challenges from team {teamChal}.")
+    else:
+      await ctx.send(f"{chalDec} challenges declined.")
+
+  @decline.error
+  async def declineError(self, ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+      seconds = math.floor(error.retry_after)
+      await ctx.send(f"Try again in {seconds} seconds lah!")
+
+  @commands.command(aliases = ["recall"], brief = "Cancel outgoing challenges.", description = "Cancel outgoing challenges.")
+  @commands.cooldown(1,60, commands.BucketType.user)
+  async def cancel(self, ctx, *args):
+    teamChal = ""
+    for x in args:
+        teamChal += x
+        teamChal += " "
+    teamChal = teamChal[:-1]
+    if teamChal == "":
+      await ctx.send("You must specify a challenge to cancel.")
+      ctx.command.reset_cooldown(ctx)
+      return
+    temp = getUserData(ctx.author.id)
+    team = temp["team"]
+    if team is None:
+      await ctx.send("You're not part of a team!")
+      return
+    team = getTeamData(team)
+    chal = team["challenges"]
+    out = []
+    for mail in chal:
+      if str(mail)[2] == "o":
+        out.append(mail)
+    if out == []:
+      await ctx.send("Your team has no outgoing challenges.")
+      return
+    current = datetime.datetime.now()
+    loop = -1
+    chalCan = 0
+    for x in out:
+      loop += 1
+      timeChal = datetime.datetime.strptime(out[loop]["o"]["expiration"], "%m/%d/%Y %H:%M:%S")
+      if current <= timeChal or out[loop]["o"]["challenged"] == teamChal:
+        teamData.update({"tn": team["tn"]}, {"$pull": {"challenges": {"o": {"expiration": out[loop]["o"]["expiration"], "challenged": out[loop]["o"]["challenged"]}}}})
+        teamData.update({"tn": out[loop]["o"]["challenged"]}, {"$pull": {"challenges": {"i": {"expiration": out[loop]["o"]["expiration"], "challenged": team["tn"]}}}})
+        chalCan += 1
+    if chalCan == 0:
+      await ctx.send(f"No challenges sent to {teamChal}.")
+    else:
+      await ctx.send(f"{chalCan} challenges canceled.")
+    
+  @cancel.error
+  async def cancelError(self, ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+      seconds = math.floor(error.retry_after)
+      await ctx.send(f"Try again in {seconds} seconds lah!")
   @commands.command(aliases=["mail","messages"], brief = "View your ingoing and outgoing challenges.", description = "View your ingoing and outgoing challenges.")
   @commands.cooldown(1, 60, commands.BucketType.user)
   async def mailbox(self, ctx):
@@ -288,7 +538,6 @@ class Teams(commands.Cog):
           print(outgoing[loop]["o"]["challenged"])
           teamData.update({"tn": team["tn"]}, {"$pull": {"challenges": {"o": {"expiration": outgoing[loop]["o"]["expiration"], "challenged": outgoing[loop]["o"]["challenged"]}}}})
           teamData.update({"tn": outgoing[loop]["o"]["challenged"]}, {"$pull": {"challenges": {"i": {"expiration": outgoing[loop]["o"]["expiration"], "challenged": team["tn"]}}}})
-          del outgoing[loop]
         else:
           expiration = "Expires: "+outgoing[loop]["o"]["expiration"]
           emO.add_field(name=outgoing[loop]["o"]["challenged"], value = expiration, inline=False)
@@ -304,7 +553,6 @@ class Teams(commands.Cog):
           print(ingoing[loop]["i"]["challenged"])
           teamData.update({"tn": team["tn"]}, {"$pull": {"challenges": {"i": {"expiration": ingoing[loop]["i"]["expiration"], "challenged": ingoing[loop]["i"]["challenged"]}}}})
           teamData.update({"tn": ingoing[loop]["i"]["challenged"]}, {"$pull": {"challenges": {"o": {"expiration": ingoing[loop]["i"]["expiration"], "challenged": team["tn"]}}}})
-          del outgoing[loop]
         else:
           expiration = "Expires: "+ingoing[loop]["i"]["expiration"]
           emI.add_field(name=ingoing[loop]["i"]["challenged"], value = expiration, inline=False)
@@ -333,6 +581,7 @@ class Teams(commands.Cog):
       await ctx.send(f"Wait {round(error.retry_after,3)} seconds. I sichuan your pepper!!")
     else:
       raise error
+
   @commands.command(brief = "Play a team game.", description = "Play a team game.")
   @commands.cooldown(1, 3600, commands.BucketType.user)
   async def game(self, ctx):
@@ -391,14 +640,33 @@ class Teams(commands.Cog):
       await ctx.send(f"Your team got {questionsRight} questions correct, gaining {points} xp.")
     except asyncio.TimeoutError:
       await ctx.send(f"You too slow lah! Game over with {points} points.")
-    
+  
+  @commands.command(aliases = ["th", "thelp", "teamh"], brief = "Overview of teams.", description = "An overview of teams.")
+  async def teamhelp(self, ctx):
+    hContent = ''' 
+    ===================================
+    **The Basics:**
+    ===================================
+    Each team can have up to 10 members, 
+    and technically up to 10 captains 
+    as well. All members can view the
+    team's inbox, put/vote in ban 
+    appeals, and accept challenges, but 
+    captains can change the team name,
+    icon, send challenges, and have more
+    weight in ban appeals.
+
+    ''' 
+    em = discord.Embed(title = "An overview of teams...", color = 15417396, description = hContent)
+    await ctx.send(embed = em)
+
 
 #Helper function uwu
 def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "streak": 0, "to-do": [], "practiceLog": [],"sprintRemaining": -10, "dailyLastCollected": d,"practiceGoal": 0, "to-done": [], "awards": []}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "sprintRemaining": -10, "dailyLastCollected": d, "streak": 0,  "awards": [], "instrument": [], "clef": 0}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam 
@@ -406,7 +674,7 @@ def getUserData(x):
 def getTeamData(x):
   userTeam = teamData.find_one({"tn": x})
   if userTeam is None:
-    newTeam = {"tn": x, "xp": 0, "questday": 0, "gamenum": 0, "members": [], "captains": [], "bans": [], "pending": [], "challenges": [], "accepted": []}
+    newTeam = {"tn": x, "xp": 0, "questday": 0, "gamenum": 0, "members": [], "captains": [], "bans": [], "pending": [], "challenges": [], "accepted": [],}
     teamData.insert_one(newTeam)
   userTeam = teamData.find_one({"tn": x})
   return userTeam

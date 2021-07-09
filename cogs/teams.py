@@ -294,9 +294,11 @@ class Teams(commands.Cog):
     teamChal = teamChal[:-1]
     if teamChal == team["tn"]:
       await ctx.send("You can't challenge your own team!")
+      ctx.command.reset_cooldown(ctx)
       return
     elif teamChal == "":
       await ctx.send("You must specify a team to challenge!")
+      ctx.command.reset_cooldown(ctx)
       return
     if team["accepted"] != []:
       await ctx.send("You cannot send challenges while in one.")
@@ -321,6 +323,7 @@ class Teams(commands.Cog):
     teamChal = teamChal[:-1]
     if teamChal == "":
       await ctx.send("You must specify a team's challenge to accept lah!")
+      ctx.command.reset_cooldown(ctx)
       return
     temp = getUserData(ctx.author.id)
     team = temp["team"]
@@ -330,6 +333,7 @@ class Teams(commands.Cog):
     team = getTeamData(team)
     if teamChal == team["tn"]:
       await ctx.send("You can't challenge your own team lah!")
+      ctx.command.reset_cooldown(ctx)
       return
     if team["accepted"] == []:
       pass
@@ -432,6 +436,7 @@ class Teams(commands.Cog):
         inb.append(mail)
     if inb == []:
       await ctx.send("Your team has no incoming challenges.")
+      ctx.command.reset_cooldown(ctx)
       return
     current = datetime.datetime.now()
     loop = -1
@@ -655,7 +660,6 @@ class Teams(commands.Cog):
     captains can change the team name,
     icon, send challenges, and have more
     weight in ban appeals.
-
     ''' 
     em = discord.Embed(title = "An overview of teams...", color = 15417396, description = hContent)
     await ctx.send(embed = em)

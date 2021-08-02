@@ -13,9 +13,11 @@ import pytz
 from PIL import Image
 import random
 import asyncio
+import json
 
 cluster = pymongo.MongoClient(os.getenv('THING'))
 userData = cluster["tigermom"]["userstats"]
+teamData = cluster["tigermom"]["teams"]
 composers = ["Bach", "Beethoven", "Mendelssohn","Mozart", "Sibelius", "Tchaikovsky", "Prokofiev", "Chopin", "Liszt", "Rachmaninoff", "Paganini", "Bingen", "Monteverdi", "Handel","Vivaldi", "Debussy", "Haydn", "Schumann", "Elgar", "Verdi","Wagner", "Strauss", "Mahler", "Schubert", "Stravinsky","Shostakovich","Brahms", "Holst", "Smetana", "Dvorak","Glass", "Bernstein", "Cage", "Boulez", "Satie", "Berg", "Gershwin", "Copland", "Schoenberg", "Bartok","Britten","Ravel"]
 
 class BubbleTea(commands.Cog):
@@ -30,26 +32,47 @@ class BubbleTea(commands.Cog):
     utcNow = pytz.utc.localize(datetime.datetime.utcnow())
     dailyLast = user["dailyLastCollected"]
     currentBal = user["bubbleTea"]
+    tem = user["team"]
     checkStreak = dailyLast + timedelta(days=2)
     checkCooldown = dailyLast + timedelta(days=1)
     d = utcNow.replace(tzinfo=None)
     if checkStreak <= d:
       newBal = currentBal+baseReward
+      addChal(tem, baseReward)
+      if user["team"] != "None":
+        team = getTeamData(user["team"])
+        if team["qname"] != "None":
+          aP = int(team["qprog"][0]["bb"])+baseReward
+          teamData.update_one({"tn":team["tn"]}, {"$push": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["cont"], "tg": team["qprog"][0]["tg"], "bb": aP}}})
+          teamData.update_one({"tn": team["tn"]}, {"$pull": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["pcont"], "tg": team["qprog"][0]["tg"], "bb": team["qprog"][0]["bb"]}}})
+          reee = checkQuest(team["tn"])
       userData.update_one({"id":ctx.author.id}, {"$set":{"streak":0}})
       userData.update_one({"id":ctx.author.id}, {"$set":{"dailyLastCollected": utcNow}})
       userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": newBal}})
       await ctx.send(f"You received {baseReward} <:bubbletea:818865910034071572>. Come back in 24 hours.")
     elif checkCooldown > d:
       await ctx.send("Stop trying to collect dailies more than once. I kungpao your chicken!")
+      reee = None
     else:
       newStreak = user["streak"]+1
       earnings = baseReward + newStreak*5
       newBal = currentBal+earnings
+      addChal(tem, earnings)
+      if user["team"] != "None":
+        team = getTeamData(user["team"])
+        if team["qname"] != "None":
+          aP = int(team["qprog"][0]["bb"])+earnings
+          teamData.update_one({"tn":team["tn"]}, {"$push": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["cont"], "tg": team["qprog"][0]["tg"], "bb": aP}}})
+          teamData.update_one({"tn": team["tn"]}, {"$pull": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["pcont"], "tg": team["qprog"][0]["tg"], "bb": team["qprog"][0]["bb"]}}})
+          reee = checkQuest(team["tn"])
       userData.update_one({"id":ctx.author.id}, {"$set":{"streak":newStreak}})
       userData.update_one({"id":ctx.author.id}, {"$set":{"dailyLastCollected": utcNow}})
       userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": newBal}})
       await ctx.send(f"You received {earnings} <:bubbletea:818865910034071572>. Come back in 24 hours.")
-  
+    if reee is None:
+      pass
+    else:
+      await ctx.send(f"*'{reee[0]}'*\nYour team has finished a quest by playing...games. Just...just go practice. Each member of your team is rewarded with {reee[1]} <:bubbletea:818865910034071572>. ")
   @daily.error
   async def daily_error(self, ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
@@ -58,23 +81,25 @@ class BubbleTea(commands.Cog):
       raise error
 
   #This without sharps and flats only took me *checks watch* 2.5 hours. 
-  @commands.command(aliases = ["nr"], brief = "Tests your notereading abilities.", description = "Tests your notereading abilities.")
-  @commands.cooldown(1, 7, commands.BucketType.user)
+  @commands.command(aliases = ["nr"], brief = "Tests your notereading abilities.", description = "Tests your notereading abilities.") #change cooldown back to 1m7
+  @commands.cooldown(5, 7, commands.BucketType.user)
   async def noteReading(self, ctx):
-    noteList = {"C":260, "D":249, "E": 234, "F":217, "G":202,"A":184,"B":169,"c":151,"d":136,"e":119,"f":104,"g":87,}
+    noteList = {"C":260, "D":249, "E": 233, "F":217, "G":201,"A":184,"B":168,"c":152,"d":136,"e":119,"f":103,"g":86,}
     vals = list(noteList.values())
     keys = list(noteList.keys())
     stave = Image.open("cogs/media/notes/trebleclef.jpg")
     picker = random.randint(1,3)
     if picker == 1:
-      note = Image.open("cogs/media/notes/wholenoteline.png")
-      note = note.resize((68,30))
-      yValueChoice = [260, 234, 202, 169, 136, 104]
+      note = Image.open("cogs/media/notes/wholenoteline1.png")
+      note = note.resize((47,28))
+      yValueChoice = [260, 233, 201, 168, 136, 103]
     else:
       note = Image.open("cogs/media/notes/wholenote.png")
       note = note.resize((47,29))
-      yValueChoice = [249, 217, 184, 151, 119, 87]
+      yValueChoice = [249, 217, 184, 152, 119, 86]
     yValue=random.choice(yValueChoice)
+    if yValue == 217 or yValue == 152:
+        note = note.resize((46,28))
     pos = vals.index(yValue)
     correctNote = keys[pos].upper()
     stave.paste(note, (330,yValue))
@@ -84,6 +109,7 @@ class BubbleTea(commands.Cog):
     em.set_image(url="attachment://image.png")
     user = getUserData(ctx.author.id)
     bal = user["bubbleTea"]
+    tem = user["team"]
     try:
       await ctx.send(file=file, embed=em)
       answer = await self.bot.wait_for('message', check= lambda message: message.author == ctx.author, timeout=10)
@@ -92,15 +118,28 @@ class BubbleTea(commands.Cog):
         await ctx.send("Correct, but Ling ling got it while doing brain surgery. +5 <:bubbletea:818865910034071572>")
         bal = bal + 5 if bal != 0 else 5 #Does this work if I do +=?
         userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
+        addChal(tem, 5)
+        if user["team"] != "None":
+          team = getTeamData(user["team"])
+          if team["qname"] != "None":
+            aP = int(team["qprog"][0]["bb"])+5
+            teamData.update_one({"tn":team["tn"]}, {"$push": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["cont"], "tg": team["qprog"][0]["tg"], "bb": aP}}})
+            teamData.update_one({"tn": team["tn"]}, {"$pull": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["pcont"], "tg": team["qprog"][0]["tg"], "bb": team["qprog"][0]["bb"]}}})
+            reee = checkQuest(team["tn"])
+            if reee is None:
+              pass
+            else:
+              await ctx.send(f"*'{reee[0]}'*\nYour team has finished a quest by playing...games. Just...just go practice. Each member of your team is rewarded with {reee[1]} <:bubbletea:818865910034071572>. ")
       else:
         await ctx.send(f"Incorrect! The right note was {correctNote}. -5 <:bubbletea:818865910034071572>")
         bal = bal - 5 if bal - 5 >= 0 else 0
         userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
+        addChal(tem, -5)
     except asyncio.TimeoutError:
       await ctx.send(f"You too slow lah! Correct answer is {correctNote}. -3 <:bubbletea:818865910034071572>")
       bal = bal - 3 if bal - 3 >= 0 else 0
       userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
-
+      addChal(tem, -3)
   @noteReading.error
   async def noteReading_error(self, ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
@@ -114,6 +153,7 @@ class BubbleTea(commands.Cog):
     global composers
     user = getUserData(ctx.author.id)
     bal = user["bubbleTea"]
+    tem = user["team"]
     tries = 0
     prevGuesses = ''
     wordLength = ""
@@ -155,6 +195,7 @@ class BubbleTea(commands.Cog):
               await ctx.send(embed = em)
               bal = bal-10 if bal >= 10 else 0
               userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
+              addChal(tem, -10)
               break
             elif "-" in wordLength:
               em = discord.Embed(title = wordLength, description = "Wrong letters: "+lettersGuessedWrong, color = 15417396)
@@ -167,7 +208,19 @@ class BubbleTea(commands.Cog):
               em.set_footer(text=f"You gain {gain} bubble tea")
               bal += gain if bal != 0 else gain
               userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
+              addChal(tem, gain)
               await ctx.send(embed = em)
+              if user["team"] != "None":
+                team = getTeamData(user["team"])
+                if team["qname"] != "None":
+                  aP = int(team["qprog"][0]["bb"])+gain
+                  teamData.update_one({"tn":team["tn"]}, {"$push": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["cont"], "tg": team["qprog"][0]["tg"], "bb": aP}}})
+                  teamData.update_one({"tn": team["tn"]}, {"$pull": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["pcont"], "tg": team["qprog"][0]["tg"], "bb": team["qprog"][0]["bb"]}}})
+                  reee = checkQuest(team["tn"])
+                  if reee is None:
+                    pass
+                  else:
+                    await ctx.send(f"*'{reee[0]}'*\nYour team has finished a quest by playing...games. Just...just go practice. Each member of your team is rewarded with {reee[1]} <:bubbletea:818865910034071572>. ")
               break
         elif letter.content.lower() == word:
           gain = 10-tries
@@ -176,7 +229,19 @@ class BubbleTea(commands.Cog):
           em.set_footer(text=f"You gain {gain} bubble tea")
           bal += gain if bal != 0 else gain
           userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
+          addChal(tem, gain)
           await ctx.send(embed = em)
+          if user["team"] != "None":
+            team = getTeamData(user["team"])
+            if team["qname"] != "None":
+              aP = int(team["qprog"][0]["bb"])+gain
+              teamData.update_one({"tn":team["tn"]}, {"$push": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["cont"], "tg": team["qprog"][0]["tg"], "bb": aP}}})
+              teamData.update_one({"tn": team["tn"]}, {"$pull": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["pcont"], "tg": team["qprog"][0]["tg"], "bb": team["qprog"][0]["bb"]}}})
+              reee = checkQuest(team["tn"])
+              if reee is None:
+                pass
+              else:
+                await ctx.send(f"*'{reee[0]}'*\nYour team has finished a quest by playing...games. Just...just go practice. Each member of your team is rewarded with {reee[1]} <:bubbletea:818865910034071572>. ")
           break
       except asyncio.TimeoutError:
         await ctx.send(f"You lose lah! Too slow! Word was {word.capitalize()}.")
@@ -194,6 +259,7 @@ class BubbleTea(commands.Cog):
   async def era(self, ctx):
     user = getUserData(ctx.author.id)
     bal = user["bubbleTea"]
+    tem = user["team"]
     global composers
     #medieval baroque classical romantic contemporary, do in
     era = ["2","34","4","3","4","4",'5','4','4','4','4','1','1','2','2','4','3','4','4','4','4','4','4','34','45','5','4','4','4','4','5','5','5','5','45','4','5','5','5','5','5','5']
@@ -213,6 +279,7 @@ class BubbleTea(commands.Cog):
       await ctx.send("Time's up! -3 <:bubbletea:818865910034071572>")
       bal = bal - 3 if bal > 3 else 0
       userData.update_one({"id":ctx.author.id}, {"$set": {"bubbleTea": bal}})
+      addChal(tem, -3)
       return
 
     if era[pick] in answer.content:
@@ -220,10 +287,23 @@ class BubbleTea(commands.Cog):
       await ctx.send("Correct, but Ling ling got it while doing brain surgery. +5 <:bubbletea:818865910034071572>")
       bal = bal + 5 if bal != 0 else 5
       userData.update_one({"id":ctx.author.id}, {"$set":{"bubbleTea": bal}})
+      addChal(tem, 5)
+      if user["team"] != "None":
+        team = getTeamData(user["team"])
+        if team["qname"] != "None":
+          aP = int(team["qprog"][0]["bb"])+5
+          teamData.update_one({"tn":team["tn"]}, {"$push": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["cont"], "tg": team["qprog"][0]["tg"], "bb": aP}}})
+          teamData.update_one({"tn": team["tn"]}, {"$pull": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["pcont"], "tg": team["qprog"][0]["tg"], "bb": team["qprog"][0]["bb"]}}})
+          reee = checkQuest(team["tn"])
+          if reee is None:
+            pass
+          else:
+            await ctx.send(f"*'{reee[0]}'*\nYour team has finished a quest by playing...games. Just...just go practice. Each member of your team is rewarded with {reee[1]} <:bubbletea:818865910034071572>. ")
     else:
       await ctx.send("Incorrect lah! -5 <:bubbletea:818865910034071572>")
       bal = bal - 5 if bal > 5 else 0
       userData.update_one({"id":ctx.author.id}, {"$set": {"bubbleTea": bal}})
+      addChal(tem, -5)
 
   @era.error
   async def era_error(self, ctx, error):
@@ -244,16 +324,106 @@ class BubbleTea(commands.Cog):
       users = getUserData(user.id)
       bal = users["bubbleTea"]
     await ctx.send(f"{user.mention} has {bal} bubble tea <:bubbletea:818865910034071572>")
+  
+  @commands.command(aliases = ["leaderboard"], brief = "Leaderboard for bubble tea.", description = "Leaderboard for bubble tea, serverwide.")
+  async def lb(self, ctx, pplShown = None):
+      if pplShown == None:
+          pplShown = 5
+      rankings = userData.find().sort("bubbleTea",-1)
+      i = 1
+      emptychance = 0
+      em = discord.Embed(title = f"Top {pplShown} Hoarders of Bubble Tea", color = 15417396)
+      em.set_thumbnail(url=ctx.guild.icon_url)
+      for x in rankings:
+          try:
+            temp = ctx.guild.get_member(x["id"])
+            temphonks = x["bubbleTea"]
+            em.add_field(name=f"{i}: {temp.name}", value=f"Bubble Tea: {temphonks}", inline=False)
+            i += 1
+          except:
+            emptychance += 1
+          if i == int(pplShown)+1:
+            break
+      if emptychance == int(pplShown):
+        em.add_field(name="No one has any bubble tea. *sigh*.", value="Use any of the commands in the bubble tea category to get started.")
+      em.set_footer(text="⏰ Go practice lah!")
+      await ctx.send(embed = em)
 
 def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "sprintRemaining": -10, "dailyLastCollected": d, "streak": 0,  "awards": [], "instrument": [], "clef": 0}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "sprintRemaining": -10, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam 
 
+def getTeamData(x):
+  userTeam = teamData.find_one({"tn": x})
+  d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
+  if userTeam is None:
+    newTeam = {"tn": x, "xp": 0, "qname": "None", "qreq": [], "qprog": [], "gamed": d, "members": [], "captains": [], "bans": [], "pending": [], "challenges": [], "accepted": [],"stats": []}
+    teamData.insert_one(newTeam)
+  userTeam = teamData.find_one({"tn": x})
+  return userTeam
+  
+def addChal(x, y): #x must be in the format of user["team"]
+  temp = getTeamData(x)
+  chal = temp["accepted"]
+  if chal != []:
+    help = chal.get('bal')
+    if help+y <= 0:
+      help = 0
+    elif help == 0:
+      help = y
+    else:
+      help += y
+    teamData.update({"tn": temp["tn"]}, {"$set": {"accepted": {"expiration": chal.get('expiration'), "challenged": chal.get('challenged'), "bal": help}}})
+
+def checkQuest(y):
+  x=getTeamData(y)
+  diff = x["qname"][:1]
+  if diff == "E":
+    diff = 10
+  elif diff == "M":
+    diff = 30
+  else:
+    diff = 60
+  utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+  timeNow = utcNow.strftime("%d %b %Y")
+  daysOld = x["qprog"][0]["days"]
+  tGames = x["qprog"][0]["tg"]
+  contributors = x["qprog"][0]["pcont"]
+  contributor = contributors.count("|")
+  if x["qprog"][0]["pday"] >= diff and x["qprog"][0]["pdone"] != timeNow:
+    daysOld = daysOld+ 1 if x["qprog"][0]["days"] < x["qreq"][0]["days"] else x["qreq"][0]["days"]
+  elif x["qprog"][0]["pday"] >= diff and x["qprog"][0]["pdone"] == timeNow:
+    pass
+  else:
+    timeNow = x["qprog"][0]["pdone"]
+  if x["qreq"][0]["days"] == daysOld:
+    if contributor >= x["qreq"][0]["pN"]:
+      if tGames >= x["qreq"][0]["tg"]:
+        tGames = x["qreq"][0]["tg"]
+        if x["qprog"][0]["bb"] >= x["qreq"][0]["bb"]:
+          members = list(x["members"])
+          with open('cogs/media/quests.json') as f:
+            data = json.load(f)
+          f.close()
+          title = x["qname"][1:]
+          amount = data[title]["Reward"]
+          for member in members:
+            temp1 = getUserData(member)
+            Bal = temp1["bubbleTea"]
+            Bal += amount
+            userData.update_one({"id": member}, {"$set": {"bubbleTea": Bal}})
+          teamData.update_one({"tn": x["tn"]}, {"$pull": {"qprog": {"days":x["qprog"][0]["days"], "pday": x["qprog"][0]["pday"], "pdone": x["qprog"][0]["pdone"],"pcont": x["qprog"][0]["pcont"], "tg": x["qprog"][0]["tg"], "bb": x["qprog"][0]["tg"]}}})
+          teamData.update_one({"tn": x["tn"]}, {"$pull": {"qreq": {"days": x["qreq"][0]["days"], "pN": x["qreq"][0]["pN"], "tg": x["qreq"][0]["tg"], "bb": x["qreq"][0]["bb"]}}})
+          teamData.update_one({"tn":x["tn"]}, {"$set": {"qname": "None"}})
+          return [data[title]["FinishText"],amount]
+  teamData.update_one({"tn": x["tn"]}, {"$push": {"qprog": {"days":daysOld, "pday": x["qprog"][0]["pday"], "pdone": timeNow,"pcont": contributors, "tg": tGames, "bb": x["qprog"][0]["bb"]}}})
+  teamData.update_one({"tn": x["tn"]}, {"$pull": {"qprog": {"days":x["qprog"][0]["days"], "pday": x["qprog"][0]["pday"], "pdone": x["qprog"][0]["pdone"],"pcont": x["qprog"][0]["pcont"], "tg": x["qprog"][0]["tg"], "bb": x["qprog"][0]["bb"]}}})
+  return
 
 def setup(bot):
   bot.add_cog(BubbleTea(bot))

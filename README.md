@@ -24,13 +24,14 @@ A TwoSet/music themed discord bot started in honor of Brett's birthday, and hope
 - FinishedGoals: View your finished goals.
 - DeleteGoal: Delete a goal.
 - **[NOT ADDED]** Sprint: Start a practice sprint.
-- **[WIP]** Stats: View all your stats.
-- **[WIP]** Scale: Gives a random scale to play
+- Stats: View all your stats.
+- Scale: Gives a random scale to play
 
 
 ### Teams 🤝
 
 - Ban: Put in a ban appeal (can lead to a perma-ban)
+- **[NOT ADDED]** Kick: Kick a member of your team
 - Create: Create a team, the name can be anything as long as it's untaken (and appropriate)
 - Join: join an existing team
 - Leave: leave your team
@@ -38,10 +39,11 @@ A TwoSet/music themed discord bot started in honor of Brett's birthday, and hope
 - Game: Play a team game in identifying the piece
 - Mailbox: See challenges, both outgoing and ingoing
 - Challenge: A team game, but you challenge another team to finish with more points.
-- **[NOT ADDED]** Accept: accept a challenge.
-- **[NOT ADDED]** Decline: decline a challenge. Can also just wait for it to time out.
-- **[NOT ADDED]** Quests: 
+- Accept: accept a challenge.
+- Decline: decline a challenge. Can also just wait for it to time out.
+- **[WIP]** Quests: Embark on a Twoset related quest, which will require your team to practice a certain amount of time per day, gain bubbletea, and even play some team games...
 - Promote: Promote someone to captain
+- **[NOT ADDED]** Demote: Demote someone from captain
 - Team: Displays your (or a team of your choice) team's members, xp, etc.
 
 ### TwoSet 🎻

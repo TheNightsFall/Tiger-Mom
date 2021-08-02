@@ -8,9 +8,11 @@ from datetime import timedelta
 import asyncio
 import pytz
 import random
+import json
 
 cluster = pymongo.MongoClient(os.getenv('THING'))
 userData = cluster["tigermom"]["userstats"]
+teamData = cluster["tigermom"]["teams"]
 
 #channel = ""
 #messageSend = ""
@@ -32,11 +34,12 @@ class Practice(commands.Cog):
     elif amountPracticed == 0:
       await ctx.send("Practice time cannot be zero lah!")
       return
+    aP = int(amountPracticed)
     user = getUserData(ctx.author.id)
     minutes = user["practiceTime"]
     pract = user["practiceLog"]
     utcNow = pytz.utc.localize(datetime.datetime.utcnow())
-    oneWeek = datetime.datetime.utcnow() - timedelta(days=8)
+    oneWeek = datetime.datetime.utcnow() - timedelta(days=31)
     timeNow = utcNow.strftime("%d %b %Y")
     minutes += int(amountPracticed) if minutes != None else int(amountPracticed)
     repertoire = ""
@@ -71,7 +74,24 @@ class Practice(commands.Cog):
         userData.update_one({"id":ctx.author.id}, {"$update":{"practiceLog": {"date": timeNow,"minutes": str(amountPracticed)}}})
       except:
         userData.update_one({"id":ctx.author.id}, {"$push":{"practiceLog": {"date": timeNow,"minutes": str(amountPracticed)}}})
-      
+    if user["team"] != "None":
+      team = getTeamData(user["team"])
+      if team["qname"] != "None":
+        tempor = team["qprog"][0]["pcont"]
+        if str(ctx.author.id) in tempor:
+          pass
+        else:
+          tempor += str(ctx.author.id)
+          tempor += "|"
+        aP = int(team["qprog"][0]["pday"])+aP
+        #I gave up.
+        teamData.update_one({"tn":team["tn"]}, {"$push": {"qprog": {"days":team["qprog"][0]["days"], "pday": aP, "pdone": team["qprog"][0]["pdone"],"pcont": tempor, "tg": team["qprog"][0]["tg"], "bb": team["qprog"][0]["bb"]}}})
+        teamData.update_one({"tn": team["tn"]}, {"$pull": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["pcont"], "tg": team["qprog"][0]["tg"], "bb": team["qprog"][0]["bb"]}}})
+        reee= checkQuest(team["tn"])
+        if reee is None:
+          pass
+        else:
+          await ctx.send(f"*'{reee[0]}'*\nHuzzah! Your team has finished a quest by PRACTICING! Ling Ling would be proud. Each member of your team is rewarded with {reee[1]} <:bubbletea:818865910034071572>. ")
     await ctx.send("Updated lah! Keep practicing or I kungpao your chicken!")
     
   @commands.command(aliases = ["setpracticegoals", "setgoals"], brief = "Set practice goals.", description = "Set practice goals.")
@@ -192,13 +212,23 @@ class Practice(commands.Cog):
     users = getUserData(user.id)
     bal = users["bubbleTea"]
     practice = str(users["practiceTime"])
+    instr = users["instruments"]
+    help = ""
+    for x in instr:
+      help += x
+      help += ", "
+    instr = help[:-2]
     teams = users["team"]
-    em = discord.Embed(title = f"{user.nick}'s stats", color = 15417396, description = f'''
-    =====================
-    Bubble tea: {bal}
-    Practice Time: {practice} minutes
-    =====================
-    Team: {teams}''')
+    line1 = ""
+    for x in range(1,len(user.name)+10):
+      line1 += "─"
+    em = discord.Embed(title = f"{user.name}`#{ctx.author.discriminator}`", color = 15417396, description = f'''
+    {line1}
+    :violin: | {instr}\n
+    ⏰ | {practice} minutes\n
+    <:bubbletea:818865910034071572> | {bal}
+    {line1}
+    Team | {teams}''')
     em.set_thumbnail(url=user.avatar_url)
     em.set_footer(text="⏰ Go practice lah!")
     await ctx.send(embed = em)
@@ -211,8 +241,10 @@ class Practice(commands.Cog):
   @commands.command(aliases = ["scales"], brief = "Generates a random scale.", description = "Generates a random scale, with arguments either 'dia' (diatonic), 'all' and 'maj', 'min', 'hmin', and 'mmin' (not added). You can also just type in any scale you want, with # for sharp and b for flat.")
   async def scale(self, ctx, *args):
     diamaj = ["cmaj.PNG","dmaj.PNG","emaj.PNG","fmaj.PNG","gmaj.PNG","amaj.PNG","bmaj.PNG"]
+    diamaj = []
     diamin = ["cmin.PNG","dmin.PNG","emin.PNG","fmin.PNG","gmin.PNG","amin.PNG","bmin.PNG"]
     diahmin = ["chmin.PNG","dhmin.PNG","ehmin.PNG","fhmin.PNG","ghmin.PNG","ahmin.PNG","bhmin.PNG"]
+    diammin = ["cmmin.PNG","dmmin.PNG","emmin.PNG","fmmin.PNG","gmmin.PNG","ammin.PNG","bmmin.PNG"]
     req = ""
     for x in args:
         req += x
@@ -227,15 +259,24 @@ class Practice(commands.Cog):
     elif "diahmin" == req:
       choice = random.choice(diahmin)
       bud = choice[:-8].capitalize() + " Harmonic Minor"
+    elif "diammin" == req:
+      choice = random.choice(diammin)
+      bud = choice[:-8].capitalize() + " Melodic Minor"
+    elif "allmaj" == req:
+      pass
     else:
       choice = req+".PNG"
       try:
         if "hmin" in req:
           bud = req[:-4].capitalize() + " Harmonic Minor"
+        elif "mmin" in req:
+          bud = req[:-4].capitalize() + " Melodic Minor"
         elif "min" in req:
           bud = req[:-3].capitalize() + " Minor"
         elif "maj" in req:
           bud = req[:-3].capitalize() + " Major"
+        else:
+          await ctx.send("Check your formatting lah!")
       except:
         await ctx.send("Something went wrong. Make sure you're typing things in the right format lah!")
         return
@@ -303,32 +344,65 @@ def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "sprintRemaining": -10, "dailyLastCollected": d, "streak": 0,  "awards": [], "instrument": [], "clef": 0}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "sprintRemaining": -10, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam
 
+def getTeamData(x):
+  userTeam = teamData.find_one({"tn": x})
+  d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
+  if userTeam is None:
+    newTeam = {"tn": x, "xp": 0, "qname": "None", "qreq": [], "qprog": [], "gamed": d, "members": [], "captains": [], "bans": [], "pending": [], "challenges": [], "accepted": [],"stats": []}
+    teamData.insert_one(newTeam)
+  userTeam = teamData.find_one({"tn": x})
+  return userTeam
+  
+def checkQuest(y):
+  x=getTeamData(y)
+  diff = x["qname"][:1]
+  if diff == "E":
+    diff = 10
+  elif diff == "M":
+    diff = 30
+  else:
+    diff = 60
+  utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+  timeNow = utcNow.strftime("%d %b %Y")
+  daysOld = x["qprog"][0]["days"]
+  tGames = x["qprog"][0]["tg"]
+  contributors = x["qprog"][0]["pcont"]
+  contributor = contributors.count("|")
+  if x["qprog"][0]["pday"] >= diff and x["qprog"][0]["pdone"] != timeNow:
+    daysOld = daysOld+ 1 if x["qprog"][0]["days"] < x["qreq"][0]["days"] else x["qreq"][0]["days"]
+  elif x["qprog"][0]["pday"] >= diff and x["qprog"][0]["pdone"] == timeNow:
+    pass
+  else:
+    timeNow = x["qprog"][0]["pdone"]
+  if x["qreq"][0]["days"] == daysOld:
+    if contributor >= x["qreq"][0]["pN"]:
+      if tGames >= x["qreq"][0]["tg"]:
+        tGames = x["qreq"][0]["tg"]
+        if x["qprog"][0]["bb"] >= x["qreq"][0]["bb"]:
+          members = list(x["members"])
+          with open('cogs/media/quests.json') as f:
+            data = json.load(f)
+          f.close()
+          title = x["qname"][1:]
+          amount = data[title]["Reward"]
+          for member in members:
+            temp1 = getUserData(member)
+            Bal = temp1["bubbleTea"]
+            Bal += amount
+            userData.update_one({"id": member}, {"$set": {"bubbleTea": Bal}})
+          teamData.update_one({"tn": x["tn"]}, {"$pull": {"qprog": {"days":x["qprog"][0]["days"], "pday": x["qprog"][0]["pday"], "pdone": x["qprog"][0]["pdone"],"pcont": x["qprog"][0]["pcont"], "tg": x["qprog"][0]["tg"], "bb": x["qprog"][0]["tg"]}}})
+          teamData.update_one({"tn": x["tn"]}, {"$pull": {"qreq": {"days": x["qreq"][0]["days"], "pN": x["qreq"][0]["pN"], "tg": x["qreq"][0]["tg"], "bb": x["qreq"][0]["bb"]}}})
+          teamData.update_one({"tn":x["tn"]}, {"$set": {"qname": "None"}})
+          return [data[title]["FinishText"],amount]
+  teamData.update_one({"tn": x["tn"]}, {"$push": {"qprog": {"days":daysOld, "pday": x["qprog"][0]["pday"], "pdone": timeNow,"pcont": contributors, "tg": tGames, "bb": x["qprog"][0]["bb"]}}})
+  teamData.update_one({"tn": x["tn"]}, {"$pull": {"qprog": {"days":x["qprog"][0]["days"], "pday": x["qprog"][0]["pday"], "pdone": x["qprog"][0]["pdone"],"pcont": x["qprog"][0]["pcont"], "tg": x["qprog"][0]["tg"], "bb": x["qprog"][0]["bb"]}}})
+  return
+          
+    #Check contributing members, tg, bb
 def setup(bot):
   bot.add_cog(Practice(bot))
-
-'''
-  @commands.command(brief="Set a reminder.", description = "Set a reminder.")
-  async def reminder(self, ctx, reminder = None, timeTil = None):
-    global channel
-    global messageSend
-    reminder = "Go practice lah!" if reminder is None else reminder
-    timeTil = 5 if timeTil is None else timeTil 
-    messageSend = reminder
-    channel = discord.utils.get(ctx.guild.channels, name=str(ctx.channel))
-    channel = channel.id
-    why.start(self.bot, timeTil)
-
-@tasks.loop()
-async def why(bot, timeSleep):
-  global channel
-  global messageSendwhile True:
-  print(channel)
-  chanel = bot.get_channel(channel)
-  await chanel.send(messageSend)
-  await asyncio.sleep(timeSleep)
-'''

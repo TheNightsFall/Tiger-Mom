@@ -3,20 +3,26 @@
     "Difficulty": "Easy",
     "DaysReq": 3,
     "TeamGames": 0,
+    "BBNeeded": 0,
     "Reward": 100,
+    "StartText": "You've recently broken your arm, and need to get back into playing again. How about setting a world record for the world's fastest intrumentalist?",
     "FinishText": "You've set the record for fastest time playing Flight of the Bumblebee, only 58 seconds long!"
   },
   "Flex perfect pitch": {
     "Difficulty": "Easy",
     "DaysReq": 2,
     "TeamGames": 0,
+    "BBNeeded": 0,
     "Reward": 75,
+    "StartText": "You've recently been doing lots of ear training and have acquired perfect pitch. But how will you let the world know you have it? Hmm...",
     "FinishText": "That's an Eb!"
   },
   "Offend all countries in charades": {
     "Difficulty": "Easy",
     "DaysReq": 3,
     "TeamGames": 0,
+    "BBNeeded": 0,
+    "StartText": "Time for another charades video!",
     "Reward": 100,
     "FinishText": "*plays La donna e mobile* England!" 
   },
@@ -24,21 +30,36 @@
     "Difficulty": "Easy",
     "DaysReq": 1,
     "TeamGames": 1,
+    "BBNeeded": 0,
+    "StartText": "Oh boy, it's time to be funni, how can you do that?",
     "Reward": 70,
-    "FinishText": "What did the violinist say to the violist? You're sh*t!"
+    "FinishText": "What did the violinist say to the violist? You're sh\\*t!"
   },
   "Compose a sonata in a minute": {
     "Difficulty": "Medium",
     "DaysReq": 7,
     "TeamGames": 1,
+    "BBNeeded": 100,
+    "StartText": "You need to make it to 60 minutes. But what can you do that would be, erm, interesting?",
     "Reward": 150,
     "FinishText": "iNtErEsTInG!"
   },
   "Make it to America's Got Talent": {
     "Difficulty": "Medium",
     "DaysReq": 3,
-    "TeamGames": 2,
+    "TeamGames": 5,
+    "BBNeeded": 100,
+    "StartText": "Hmm, there are so, so many child prodigies that destroy your soul, and you really don't want to practice, what shall you do?",
     "Reward": 200,
     "FinishText": "You made up a sob story! Congrats! You made it!"
   },
+  "Cheat it into Menuhin": {
+    "Difficulty": "Hard",
+    "DaysReq": 14,
+    "TeamGames": 3,
+    "BBNeeded": 100,
+    "StartText": "The ultimate challenge that would prove to your parents being a musician wasn't a fiscally irresponsible idea...but how could you make it in?",
+    "Reward": 500,
+    "FinishText": "Hmm, not sure if those AGT tactics worked, but at least you got to participate!"
+  }
 }

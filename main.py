@@ -25,6 +25,7 @@ intents.voice_states = True
 
 cluster = pymongo.MongoClient(os.getenv('THING'))
 guildData = cluster["tigermom"]["guilds"]
+#userData = cluster["tigermom"]["userstats"]
 teamData = cluster["tigermom"]["teams"]
 bot = commands.Bot(command_prefix="p.", 
 case_insensitive=True, 

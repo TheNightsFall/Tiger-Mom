@@ -77,6 +77,7 @@ class Practice(commands.Cog):
       except:
         userData.update_one({"id":ctx.author.id}, {"$push":{"practiceLog": {"date": timeNow,"minutes": str(amountPracticed)}}})
     await ctx.send("Updated lah! Keep practicing or I kungpao your chicken!")
+    checkQuota(ctx.author.id)
     if user["team"] != "None":
       team = getTeamData(user["team"])
       if team["qname"] != "None":
@@ -95,7 +96,19 @@ class Practice(commands.Cog):
           pass
         else:
           await ctx.send(f"*'{reee[0]}'*\nHuzzah! Your team has finished a quest by PRACTICING! Ling Ling would be proud. Each member of your team is rewarded with {reee[1]} <:bubbletea:818865910034071572>. ")
-    
+  
+  @commands.command(aliases = ["q", "qt"], brief="Set a quota for practice time per day. Miss a couple days...well...", description = "Set a quota for practice time per day. Miss a couple days...well...")
+  async def quota(self, ctx, quotaTime = None):
+    if quotaTime is None:
+      quotaTime = 40
+    elif quotaTime.isnumeric() == False:
+      await ctx.send("Quota time must be a number lah!")
+      return
+    utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+    timeNow = utcNow.strftime("%d %b %Y")
+    user = getUserData(ctx.author.id)
+    userData.update_one({"id":ctx.author.id}, {"$set": {"qtime": quotaTime}})
+    await ctx.send("Quota time updated. Go practice!")
   @commands.command(aliases = ["setpracticegoals", "setgoals"], brief = "Set practice goals.", description = "Set practice goals.")
   async def setgoal(self, ctx, *args):
     goal = ""
@@ -341,6 +354,7 @@ class Practice(commands.Cog):
           pass
         else:
           await ctx.send(f"*'{reee[0]}'*\nHuzzah! Your team has finished a quest by PRACTICING! Ling Ling would be proud. Each member of your team is rewarded with {reee[1]} <:bubbletea:818865910034071572>. ")
+    checkQuota(ctx.author.id)
     
   @commands.command(aliases = ["scales"], brief = "Generates a random scale.", description = "Generates a random scale, with arguments either 'dia' (diatonic), 'all' and 'maj', 'min', 'hmin', and 'mmin' (not added). You can also just type in any scale you want, with # for sharp and b for flat.")
   async def scale(self, ctx, *args):
@@ -448,7 +462,7 @@ def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0, "quota": "12 July 2012", "qtime": 0}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam
@@ -461,6 +475,23 @@ def getTeamData(x):
     teamData.insert_one(newTeam)
   userTeam = teamData.find_one({"tn": x})
   return userTeam
+  
+def checkQuota(x):
+  user = userData.find_one({"id": x})
+  amt = 0
+  utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+  timeNow = utcNow.strftime("%d %b %Y")
+  if user["qtime"] == timeNow:
+    return
+  for y in range(0,len(user["practiceLog"])):
+    try:
+      amt += user["practiceLog"][y]["minutes"]
+    except:
+      str1 = user["practiceLog"][y]["minutes"]
+      str1 = str1.split( )
+      amt += int(str1[0])
+  if amt >= user["qtime"]:
+    userData.update_one({"id": x}, {"$set": {"quota": timeNow}})
 
 def checkQuest(y):
   x=getTeamData(y)

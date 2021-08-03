@@ -30,12 +30,19 @@ class BubbleTea(commands.Cog):
     baseReward = 75
     user = getUserData(ctx.author.id)
     utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+    d = utcNow.replace(tzinfo=None)
+    if user["qtime"] != 0:
+      twoDays = d-timedelta(days=2)
+      help = datetime.datetime.strptime(user["quota"],"%d %B %Y")
+      if help < twoDays:
+        await ctx.send("You haven't met your practice quota recently lah!")
+        ctx.command.reset_cooldown(ctx)
+        return
     dailyLast = user["dailyLastCollected"]
     currentBal = user["bubbleTea"]
     tem = user["team"]
     checkStreak = dailyLast + timedelta(days=2)
     checkCooldown = dailyLast + timedelta(days=1)
-    d = utcNow.replace(tzinfo=None)
     if checkStreak <= d:
       newBal = currentBal+baseReward
       addChal(tem, baseReward)
@@ -43,7 +50,7 @@ class BubbleTea(commands.Cog):
         team = getTeamData(user["team"])
         if team["qname"] != "None":
           aP = int(team["qprog"][0]["bb"])+baseReward
-          teamData.update_one({"tn":team["tn"]}, {"$push": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["cont"], "tg": team["qprog"][0]["tg"], "bb": aP}}})
+          teamData.update_one({"tn":team["tn"]}, {"$push": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["pcont"], "tg": team["qprog"][0]["tg"], "bb": aP}}})
           teamData.update_one({"tn": team["tn"]}, {"$pull": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["pcont"], "tg": team["qprog"][0]["tg"], "bb": team["qprog"][0]["bb"]}}})
           reee = checkQuest(team["tn"])
       userData.update_one({"id":ctx.author.id}, {"$set":{"streak":0}})
@@ -84,6 +91,18 @@ class BubbleTea(commands.Cog):
   @commands.command(aliases = ["nr"], brief = "Tests your notereading abilities.", description = "Tests your notereading abilities.")
   @commands.cooldown(1, 7, commands.BucketType.user)
   async def noteReading(self, ctx):
+    user = getUserData(ctx.author.id)
+    bal = user["bubbleTea"]
+    tem = user["team"]
+    utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+    d = utcNow.replace(tzinfo=None)
+    if user["qtime"] != 0:
+      twoDays = d-timedelta(days=2)
+      help = datetime.datetime.strptime(user["quota"],"%d %B %Y")
+      if help < twoDays:
+        await ctx.send("You haven't met your practice quota recently lah!")
+        ctx.command.reset_cooldown(ctx)
+        return
     noteList = {"C":260, "D":249, "E": 233, "F":217, "G":201,"A":184,"B":168,"c":152,"d":136,"e":119,"f":103,"g":86,}
     vals = list(noteList.values())
     keys = list(noteList.keys())
@@ -107,9 +126,7 @@ class BubbleTea(commands.Cog):
     em = discord.Embed(title="Identify the note!", color = 15417396)
     file = discord.File("cogs/media/notes/notereading.jpg", filename = "image.jpg")
     em.set_image(url="attachment://image.png")
-    user = getUserData(ctx.author.id)
-    bal = user["bubbleTea"]
-    tem = user["team"]
+    
     try:
       await ctx.send(file=file, embed=em)
       answer = await self.bot.wait_for('message', check= lambda message: message.author == ctx.author, timeout=10)
@@ -150,8 +167,18 @@ class BubbleTea(commands.Cog):
   @commands.command(aliases = ["composers","hangman","manhang"], brief = "Hangman...but with bubble tea.", description = "Hangman...but with bubble tea.")
   @commands.cooldown(1, 20, commands.BucketType.user)
   async def hm(self, ctx):
+    
     global composers
     user = getUserData(ctx.author.id)
+    utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+    d = utcNow.replace(tzinfo=None)
+    if user["qtime"] != 0:
+      twoDays = d-timedelta(days=2)
+      help = datetime.datetime.strptime(user["quota"],"%d %B %Y")
+      if help < twoDays:
+        await ctx.send("You haven't met your practice quota recently lah!")
+        ctx.command.reset_cooldown(ctx)
+        return
     bal = user["bubbleTea"]
     tem = user["team"]
     tries = 0
@@ -260,6 +287,15 @@ class BubbleTea(commands.Cog):
     user = getUserData(ctx.author.id)
     bal = user["bubbleTea"]
     tem = user["team"]
+    utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+    d = utcNow.replace(tzinfo=None)
+    if user["qtime"] != 0:
+      twoDays = d-timedelta(days=2)
+      help = datetime.datetime.strptime(user["quota"],"%d %B %Y")
+      if help < twoDays:
+        await ctx.send("You haven't met your practice quota recently lah!")
+        ctx.command.reset_cooldown(ctx)
+        return
     global composers
     #medieval baroque classical romantic contemporary, do in
     era = ["2","34","4","3","4","4",'5','4','4','4','4','1','1','2','2','4','3','4','4','4','4','4','4','34','45','5','4','4','4','4','5','5','5','5','45','4','5','5','5','5','5','5']
@@ -313,7 +349,18 @@ class BubbleTea(commands.Cog):
       raise error
 
   @commands.command(brief = "Displays a user's bubble tea.", description = "Displays a user's bubble tea.")
+  @commands.cooldown(1, 10, commands.BucketType.user)
   async def bal(self, ctx, user:discord.Member = None):
+    use = getUserData(ctx.author.id)
+    utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+    d = utcNow.replace(tzinfo=None)
+    if use["qtime"] != 0:
+      twoDays = d-timedelta(days=2)
+      help = datetime.datetime.strptime(user["quota"],"%d %B %Y")
+      if help < twoDays:
+        await ctx.send("You haven't met your practice quota recently lah!")
+        ctx.command.reset_cooldown(ctx)
+        return
     if user is None:
       user = ctx.author
       users = getUserData(user.id)
@@ -326,7 +373,18 @@ class BubbleTea(commands.Cog):
     await ctx.send(f"{user.mention} has {bal} bubble tea <:bubbletea:818865910034071572>")
   
   @commands.command(aliases = ["leaderboard"], brief = "Leaderboard for bubble tea.", description = "Leaderboard for bubble tea, serverwide.")
+  @commands.cooldown(1, 30, commands.BucketType.user)
   async def lb(self, ctx, pplShown = None):
+      user = getUserData(ctx.author.id)
+      utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+      d = utcNow.replace(tzinfo=None)
+      if user["qtime"] != 0:
+        twoDays = d-timedelta(days=2)
+        help = datetime.datetime.strptime(user["quota"],"%d %B %Y")
+        if help < twoDays:
+          await ctx.send("You haven't met your practice quota recently lah!")
+          ctx.command.reset_cooldown(ctx)
+          return
       if pplShown == None:
           pplShown = 5
       rankings = userData.find().sort("bubbleTea",-1)
@@ -353,7 +411,7 @@ def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0, "quota": "12 July 2012", "qtime": 0}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam 

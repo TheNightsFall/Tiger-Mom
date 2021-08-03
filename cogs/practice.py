@@ -5,6 +5,8 @@ from discord.ext import commands
 import discord.utils
 import datetime
 from datetime import timedelta
+import time
+import math
 import asyncio
 import pytz
 import random
@@ -41,7 +43,7 @@ class Practice(commands.Cog):
     utcNow = pytz.utc.localize(datetime.datetime.utcnow())
     oneWeek = datetime.datetime.utcnow() - timedelta(days=31)
     timeNow = utcNow.strftime("%d %b %Y")
-    minutes += int(amountPracticed) if minutes != None else int(amountPracticed)
+    minutes = minutes+ int(amountPracticed) if minutes != None else int(amountPracticed)
     repertoire = ""
     for x in args:
       repertoire += x
@@ -74,6 +76,7 @@ class Practice(commands.Cog):
         userData.update_one({"id":ctx.author.id}, {"$update":{"practiceLog": {"date": timeNow,"minutes": str(amountPracticed)}}})
       except:
         userData.update_one({"id":ctx.author.id}, {"$push":{"practiceLog": {"date": timeNow,"minutes": str(amountPracticed)}}})
+    await ctx.send("Updated lah! Keep practicing or I kungpao your chicken!")
     if user["team"] != "None":
       team = getTeamData(user["team"])
       if team["qname"] != "None":
@@ -92,7 +95,6 @@ class Practice(commands.Cog):
           pass
         else:
           await ctx.send(f"*'{reee[0]}'*\nHuzzah! Your team has finished a quest by PRACTICING! Ling Ling would be proud. Each member of your team is rewarded with {reee[1]} <:bubbletea:818865910034071572>. ")
-    await ctx.send("Updated lah! Keep practicing or I kungpao your chicken!")
     
   @commands.command(aliases = ["setpracticegoals", "setgoals"], brief = "Set practice goals.", description = "Set practice goals.")
   async def setgoal(self, ctx, *args):
@@ -119,15 +121,21 @@ class Practice(commands.Cog):
   async def goals(self, ctx):
     user = getUserData(ctx.author.id)
     items = user["to-do"]
-    em = discord.Embed(title = f"{ctx.author.display_name}'s Goals", color = 15417396)
+    line1= ""
+    for x in range(1,len(ctx.author.name)+17):
+      line1 += "─"
+    em = discord.Embed(title = f"{ctx.author.display_name}'s Goals", description=line1, color = 15417396)
     em.set_thumbnail(url=ctx.author.avatar_url)
     for item in items:
       if item.find(",") == -1:
+        item = ":black_square_button:  "+item
         em.add_field(name = item, value = "[no desc]", inline=False) #Ugly af I know but can't think of anything else
       else:
         x = item.split(",", 1)
+        x[0] = ":black_square_button:  "+x[0]
         em.add_field(name = x[0], value = x[1], inline=False)
-    em.set_footer(text="Go practice lah!")
+    em.set_footer(text="⏰ Go practice lah!")
+    em.timestamp = datetime.datetime.utcnow()
     await ctx.send(embed = em)
 
   @commands.command(aliases = ["delete", "dg"], brief = "Delete a goal.", description = "Delete a goal.")
@@ -194,15 +202,21 @@ class Practice(commands.Cog):
   async def finishedgoals(self, ctx):
     user = getUserData(ctx.author.id)
     items = user["to-done"]
-    em = discord.Embed(title = f"{ctx.author.display_name}'s Finished Goals", color = 15417396)
+    line1= ""
+    for x in range(1,len(ctx.author.name)+14):
+      line1 += "─"
+    em = discord.Embed(title = f"{ctx.author.display_name}'s Finished Goals", description = line1, color = 15417396)
     em.set_thumbnail(url=ctx.author.avatar_url)
     for item in items:
       if item.find(",") == -1:
+        item = ":ballot_box_with_check:  "+item
         em.add_field(name = item, value = "[no desc added]")
       else:
         x = item.split(",", 1)
+        item[0] = ":ballot_box_with_check: "+str(item[0])
         em.add_field(name = x[0], value = x[1])
-    em.set_footer(text="Go practice lah!")
+    em.set_footer(text="⏰ Go practice lah!")
+    em.timestamp = datetime.datetime.utcnow()
     await ctx.send(embed = em)
   
   @commands.command(aliases = ["statistics", "stat"], brief = "Shows user's stats.", description = "Shows user's stats, among other things.")
@@ -212,12 +226,15 @@ class Practice(commands.Cog):
     users = getUserData(user.id)
     bal = users["bubbleTea"]
     practice = str(users["practiceTime"])
-    instr = users["instruments"]
-    help = ""
-    for x in instr:
-      help += x
-      help += ", "
-    instr = help[:-2]
+    instr = users["instrument"]
+    if instr == []:
+      instr = "None"
+    else:
+      help = ""
+      for x in instr:
+        help += x
+        help += ", "
+      instr = help[:-2]
     teams = users["team"]
     line1 = ""
     for x in range(1,len(user.name)+10):
@@ -237,7 +254,94 @@ class Practice(commands.Cog):
   async def minutegoal(self, ctx, minutes):
     pass
   '''
-  
+  @commands.command(aliases = ["sprint", "ps"], brief = "Start a practice session. Time automatically recorded.", description = "Start a practice session. The time you practice will be automatically recorded. The max time for one session is 90 minutes. Command formatting: either type the command, and when you're finished practicing, send any message to end the sprint. Second, type a specific amount of time (in MINUTES), and the bot will ping you when it's finished. Cooldown time: 5 minutes.")
+  @commands.cooldown(1, 300, commands.BucketType.user)
+  async def practicesession(self, ctx, timeOptional = None):
+    if timeOptional is None:
+      timeOptional = "help"
+    if timeOptional.isnumeric() == False:
+      try:
+        em = discord.Embed(title="⏰ Practice session begins now.", color=15417396)
+        em.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+        em.timestamp = datetime.datetime.utcnow()
+        await ctx.send(embed = em)
+        start=time.time()
+        answer = await self.bot.wait_for('message', check= lambda message: message.author == ctx.author, timeout=5400)
+        end = time.time()
+        amountPracticed=math.floor((end-start)/60)
+        em = discord.Embed(title = f"{amountPracticed} minutes has elapsed, practice session ended and time recorded.",color=15417396)
+        em.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+        em.timestamp = datetime.datetime.utcnow()
+        await ctx.send(embed = em)
+      except asyncio.TimeoutError:
+        await ctx.send(f"Attention {ctx.author.mention}, 90 minutes has elapsed. Time has been recorded, and take a break!")
+    else:
+      if timeOptional > 90:
+        timeOptional = 90
+      try:
+        em = discord.Embed(title=f"⏰ {timeOptional} minute practice session begins now.", color=15417396)
+        em.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+        em.timestamp = datetime.datetime.utcnow()
+        await ctx.send(embed = em)
+        start=time.time()
+        answer = await self.bot.wait_for('message', check= lambda message: message.author == ctx.author, timeout=timeOptional)
+        end = time.time()
+        amountPracticed=math.floor((end-start)/60)
+        em = discord.Embed(title = f"{amountPracticed} minutes has elapsed, practice session ended and time recorded.",color=15417396)
+        em.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+        em.timestamp = datetime.datetime.utcnow()
+        await ctx.send(embed = em)
+      except asyncio.TimeoutError:
+        await ctx.send(f"Attention {ctx.author.mention}, {timeOptional} minutes has elapsed. Time recorded and take a break!")
+        amountPracticed = timeOptional
+    user = getUserData(ctx.author.id)
+    minutes = user["practiceTime"]
+    pract = user["practiceLog"]
+    utcNow = pytz.utc.localize(datetime.datetime.utcnow())
+    oneMonth = datetime.datetime.utcnow() - timedelta(days=31)
+    timeNow = utcNow.strftime("%d %b %Y")
+    minutes = minutes+int(amountPracticed) if minutes != None else int(amountPracticed)
+    userData.update_one({"id":ctx.author.id}, {"$set": {"practiceTime": minutes}})
+    while len(pract) > 99:
+      userData.update_one({"id": ctx.author.id}, {"$pull": {"practiceLog": {"date": pract[0]["date"], "minutes": pract[0]["minutes"]}}})
+      
+    loop = -1
+    for x in pract:
+      loop += 1
+      try:
+        if pract[loop]["date"] == timeNow:
+          amountPracticed = int(pract[loop]["minutes"]) + int(amountPracticed)
+          userData.update({"id": ctx.author.id}, {"$pull": {"practiceLog": {"date": timeNow, "minutes": pract[loop]["minutes"]}}})
+        else:
+          help = pract[loop]["date"]
+          timeTemp = datetime.datetime.strptime(help, "%d %b %Y")
+          if timeTemp < oneMonth:
+            userData.update({"id": ctx.author.id}, {"$pull": {"practiceLog": {"date": pract[loop]["date"], "minutes": pract[loop]["minutes"]}}})
+      except:
+        pass
+    try:
+      userData.update_one({"id":ctx.author.id}, {"$update":{"practiceLog": {"date": timeNow,"minutes": str(amountPracticed)}}})
+    except:
+      userData.update_one({"id":ctx.author.id}, {"$push":{"practiceLog": {"date": timeNow,"minutes": str(amountPracticed)}}})
+    if user["team"] != "None":
+      team = getTeamData(user["team"])
+      if team["qname"] != "None":
+        tempor = team["qprog"][0]["pcont"]
+        if str(ctx.author.id) in tempor:
+          pass
+        else:
+          tempor += str(ctx.author.id)
+          tempor += "|"
+        aP = int(team["qprog"][0]["pday"])+int(amountPracticed)
+
+        teamData.update_one({"tn":team["tn"]}, {"$push": {"qprog": {"days":team["qprog"][0]["days"], "pday": aP, "pdone": team["qprog"][0]["pdone"],"pcont": tempor, "tg": team["qprog"][0]["tg"], "bb": team["qprog"][0]["bb"]}}})
+        teamData.update_one({"tn": team["tn"]}, {"$pull": {"qprog": {"days":team["qprog"][0]["days"], "pday": team["qprog"][0]["pday"], "pdone": team["qprog"][0]["pdone"],"pcont": team["qprog"][0]["pcont"], "tg": team["qprog"][0]["tg"], "bb": team["qprog"][0]["bb"]}}})
+        reee= checkQuest(team["tn"])
+        if reee is None:
+          pass
+        else:
+          await ctx.send(f"*'{reee[0]}'*\nHuzzah! Your team has finished a quest by PRACTICING! Ling Ling would be proud. Each member of your team is rewarded with {reee[1]} <:bubbletea:818865910034071572>. ")
+    
   @commands.command(aliases = ["scales"], brief = "Generates a random scale.", description = "Generates a random scale, with arguments either 'dia' (diatonic), 'all' and 'maj', 'min', 'hmin', and 'mmin' (not added). You can also just type in any scale you want, with # for sharp and b for flat.")
   async def scale(self, ctx, *args):
     diamaj = ["cmaj.PNG","dmaj.PNG","emaj.PNG","fmaj.PNG","gmaj.PNG","amaj.PNG","bmaj.PNG"]
@@ -344,7 +448,7 @@ def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "sprintRemaining": -10, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam
@@ -357,7 +461,7 @@ def getTeamData(x):
     teamData.insert_one(newTeam)
   userTeam = teamData.find_one({"tn": x})
   return userTeam
-  
+
 def checkQuest(y):
   x=getTeamData(y)
   diff = x["qname"][:1]

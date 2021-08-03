@@ -15,7 +15,7 @@ import math
 cluster = pymongo.MongoClient(os.getenv('THING'))
 userData = cluster["tigermom"]["userstats"]
 teamData = cluster["tigermom"]["teams"]
-
+#Use for icons:https://thenounproject.com/microdotgraphic/collection/music-instrument/
 
 class Teams(commands.Cog):
   def __init__(self, bot):
@@ -205,8 +205,31 @@ class Teams(commands.Cog):
         teamData.update_one({"tn": team}, {"$push": {"pending": x}})
         await ctx.send(":ballot_box_with_checkmark: Your vote has been recorded.")
 
-  @commands.command(aliases = ["capt", "cap", "promote"])
-  @commands.cooldown(1, 60, commands.BucketType.user)
+  @commands.command(aliases=["dm"], brief="Demote someone from captain.", description = "Demote someone from captain.")
+  @commands.cooldown(1, 6000, commands.BucketType.user)
+  async def demote(self, ctx, user:discord.Member = None):
+    if user is None:
+      await ctx.send("You must pick someone to demote from captain lah!")
+      ctx.command.reset_cooldown(ctx)
+      return
+    temp = getUserData(ctx.author.id)
+    team = temp["team"]
+    if team == "None":
+      await ctx.send("You're not part of a team lah!")
+      ctx.command.reset_cooldown(ctx)
+      return
+    team = getTeamData(team)
+    capts = team["captains"]
+    if ctx.author.id == capts[0]:
+      if user.id in capts:
+        teamData.update_one({"tn": team["tn"]}, {"$pull": {"captains": user.id}})
+        await ctx.send("User demoted.")
+      else:
+        await ctx.send("That user is not a captain of your team!")
+    else:
+      await ctx.send("You're not the team's founder/foremost captain, you do not have permission to do this.")
+  @commands.command(aliases = ["capt", "cap", "promote"], brief="Promote someone to captain", description="Promote someone to captain")
+  @commands.cooldown(1, 6000, commands.BucketType.user)
   async def captains(self, ctx, user:discord.Member = None):
     if user is None:
       await ctx.send("You must pick someone to promote to captain!")
@@ -738,7 +761,49 @@ class Teams(commands.Cog):
       em.add_field(name="Bubble Tea required:", value=data[choices]["BBNeeded"], inline=True)
     em.set_footer(text ="Go practice lah! ⏰")
     await ctx.send(embed=em)
-  
+  @commands.command(aliases=["dq","displayq","displayquest","showquest","squest"], brief="Displays team's current quest", description = "Displays a team's progress on their current quest. Cooldown time: 10 minutes.")
+  @commands.cooldown(1, 600, commands.BucketType.user)
+  async def dquest(self, ctx):
+    temp = getUserData(ctx.author.id)
+    hasTeam = temp["team"]
+    if hasTeam == "None":
+      await ctx.send("You're not part of a team lah!")
+      return
+    team = getTeamData(hasTeam)
+    currentQuest = team["qname"]
+    if currentQuest == "None":
+      await ctx.send("Your team is not on a quest.")
+      return
+    diff = team["qname"][:1]
+    if diff == "E":
+      diff = 4373885
+      difficulty = "Easy"
+    elif diff == "M":
+      diff = 16768122
+      difficulty = "Medium"
+    else:
+      diff = 15417396
+      difficulty = "Hard"
+    name = team["qname"][1:]
+    line1= ""
+    for x in range(1,len(name)+7):
+      line1 += "─"
+    em = discord.Embed(title=f"Current quest: {name}", description = line1, color = diff)
+    em.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+    em.add_field(name="Difficulty", value=difficulty, inline=False)
+    val =team["qprog"][0]["days"]
+    val2=team["qreq"][0]["days"]
+    em.add_field(name="Days required", value=f"{val}/{val2}", inline=True)
+    if team["qreq"][0]["tg"] != 0:
+      val =team["qprog"][0]["tg"]
+      val2=team["qreq"][0]["tg"]
+      em.add_field(name="Games required", value=f"{val}/{val2}",inline=True)
+    if team["qreq"][0]["bb"] != 0:
+      val =team["qprog"][0]["bb"]
+      val2=team["qreq"][0]["bb"]
+      em.add_field(name="Bubble Tea required:", value=f"{val}/{val2}", inline=True)
+    await ctx.send(embed=em)
+
   @commands.command(aliases = ["th", "thelp", "teamh"], brief = "Overview of teams.", description = "An overview of teams.")
   async def teamhelp(self, ctx):
     hContent = ''' 
@@ -763,7 +828,7 @@ def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "sprintRemaining": -10, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam 

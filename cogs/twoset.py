@@ -7,7 +7,7 @@ import random
 import dns
 from PIL import Image, ImageFont, ImageDraw
 import TenGiphPy
-from datetime import datetime
+import datetime
 
 #Sets up API, https://www.reddit.com/prefs/apps.
 reddit = praw.Reddit(client_id=os.getenv('CLIENTID'), client_secret=os.getenv('SECRET'), user_agent="The_Nights_Fall")

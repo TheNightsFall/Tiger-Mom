@@ -81,8 +81,8 @@ class BubbleTea(commands.Cog):
       raise error
 
   #This without sharps and flats only took me *checks watch* 2.5 hours. 
-  @commands.command(aliases = ["nr"], brief = "Tests your notereading abilities.", description = "Tests your notereading abilities.") #change cooldown back to 1m7
-  @commands.cooldown(5, 7, commands.BucketType.user)
+  @commands.command(aliases = ["nr"], brief = "Tests your notereading abilities.", description = "Tests your notereading abilities.")
+  @commands.cooldown(1, 7, commands.BucketType.user)
   async def noteReading(self, ctx):
     noteList = {"C":260, "D":249, "E": 233, "F":217, "G":201,"A":184,"B":168,"c":152,"d":136,"e":119,"f":103,"g":86,}
     vals = list(noteList.values())
@@ -353,7 +353,7 @@ def getUserData(x):
   userTeam = userData.find_one({"id": x})
   d = datetime.datetime.strptime("1919-10-13.000Z","%Y-%m-%d.000Z")
   if userTeam is None:
-    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "sprintRemaining": -10, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0}
+    newUser = {"id": x, "practiceTime": 0, "bubbleTea": 0, "team": "None", "to-do": [], "to-done": [],"practiceLog": [], "practiceGoal": 0, "dailyLastCollected": d, "streak": 0, "instrument": [], "clef": 0}
     userData.insert_one(newUser)
   userTeam = userData.find_one({"id": x})
   return userTeam 
@@ -369,7 +369,7 @@ def getTeamData(x):
   
 def addChal(x, y): #x must be in the format of user["team"]
   temp = getTeamData(x)
-  chal = temp["accepted"]
+  chal = temp["accepted"][0]
   if chal != []:
     help = chal.get('bal')
     if help+y <= 0:
@@ -378,7 +378,8 @@ def addChal(x, y): #x must be in the format of user["team"]
       help = y
     else:
       help += y
-    teamData.update({"tn": temp["tn"]}, {"$set": {"accepted": {"expiration": chal.get('expiration'), "challenged": chal.get('challenged'), "bal": help}}})
+    teamData.update({"tn": temp["tn"]}, {"$push": {"accepted": {"expiration": chal.get('expiration'), "challenged": chal.get('challenged'), "bal": help}}})
+    teamData.update({"tn": temp["tn"]}, {"$pull": {"accepted": {"expiration": chal.get('expiration'), "challenged": chal.get('challenged'), "bal": chal.get('bal')}}})
 
 def checkQuest(y):
   x=getTeamData(y)

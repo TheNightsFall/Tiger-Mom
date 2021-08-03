@@ -23,7 +23,7 @@ A TwoSet/music themed discord bot started in honor of Brett's birthday, and hope
 - MeetGoal: Indicate you've accomplished a goal.
 - FinishedGoals: View your finished goals.
 - DeleteGoal: Delete a goal.
-- **[NOT ADDED]** Sprint: Start a practice sprint.
+- Sprint: Start a practice sprint.
 - Stats: View all your stats.
 - Scale: Gives a random scale to play
 
